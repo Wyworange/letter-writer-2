@@ -1,0 +1,7 @@
+{
+  "name": "Epistola: Historical Correspondence & Cultural Epochs",
+  "description": "An untraditional immersive letter writing app where users step into global historical figures, compose authentic letters via historical events and moods, inspect period writing kits, and unpack cultural differences from a modern perspective.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
