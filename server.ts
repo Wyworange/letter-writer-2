@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
@@ -10,6 +10,11 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// Health check endpoint for dev server and container monitors
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // Lazy-initialized Gemini client with telemetry header
 let aiClient: GoogleGenAI | null = null;

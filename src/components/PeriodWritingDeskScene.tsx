@@ -20,11 +20,8 @@ import {
   Volume2, 
   VolumeX, 
   Layers, 
-  Share2, 
   Sparkles, 
   Edit3, 
-  Eye, 
-  EyeOff, 
   RotateCcw,
   BookOpen,
   Check,
@@ -35,18 +32,141 @@ import {
   Info,
   Users,
   X,
-  ChevronRight,
-  HelpCircle,
-  Maximize2,
-  Lock
+  ChevronDown,
+  ChevronUp,
+  Tag,
+  Cpu
 } from 'lucide-react';
 import { 
-  SceneIllustration, 
   RecipientVisualStamp, 
-  WitnessCameo, 
-  VisualMoodSphere, 
-  VisualToneSeal 
+  WitnessCameo 
 } from './HistoricalVisualScenes';
+import { RecipientNetworkWeb, getPortraitForPerson } from './RecipientNetworkWeb';
+
+// ============================================================================
+// HISTORICAL EVENT CATEGORIZATION DEFINITIONS
+// Categorizes shared episodes and milestones into distinct thematic lenses
+// ============================================================================
+
+export type EventCategory = 'all' | 'intellectual' | 'solidarity' | 'crisis' | 'life';
+
+export interface EventCategoryDef {
+  id: EventCategory;
+  label: string;
+  labelEn: string;
+  icon: string;
+  description: string;
+}
+
+export const EVENT_CATEGORIES: EventCategoryDef[] = [
+  { 
+    id: 'all', 
+    label: 'All', 
+    labelEn: 'All Events', 
+    icon: '📜',
+    description: 'All recorded mutual events and dispatches'
+  },
+  { 
+    id: 'intellectual', 
+    label: 'Theory', 
+    labelEn: 'Intellectual & Theory', 
+    icon: '💡',
+    description: 'Scientific councils, theoretical debates, and laboratory breakthroughs'
+  },
+  { 
+    id: 'solidarity', 
+    label: 'Solidarity', 
+    labelEn: 'Solidarity & Bonds', 
+    icon: '🤝',
+    description: 'Mutual moral defense, intimate encouragement, and private allyship'
+  },
+  { 
+    id: 'crisis', 
+    label: 'Crises', 
+    labelEn: 'Crisis & Turning Points', 
+    icon: '⚡',
+    description: 'Wartime mobilization, international assemblies, and historical upheavals'
+  },
+  { 
+    id: 'life', 
+    label: 'Journeys', 
+    labelEn: 'Journeys & Life', 
+    icon: '🌄',
+    description: 'Alpine expeditions, veranda philosophical teas, and family correspondence'
+  }
+];
+
+export function getEventCategory(item: {
+  title: string;
+  summary?: string;
+  context?: string;
+  historicalContext?: string;
+  keyTopics?: string[];
+}): EventCategory {
+  const text = `${item.title} ${item.summary || ''} ${item.context || ''} ${item.historicalContext || ''} ${(item.keyTopics || []).join(' ')}`.toLowerCase();
+  
+  // 1. Solidarity, moral defense, intimate kinship
+  if (
+    text.includes('solidarity') ||
+    text.includes('press scandal') ||
+    text.includes('yellow journalism') ||
+    text.includes('moral support') ||
+    text.includes('rabble') ||
+    text.includes('friendship') ||
+    text.includes('admiration') ||
+    text.includes('sympathy') ||
+    text.includes('scandal') ||
+    text.includes('defend') ||
+    text.includes('kinship') ||
+    text.includes('sorrow') ||
+    text.includes('consolation')
+  ) {
+    return 'solidarity';
+  }
+  
+  // 2. Wartime, political crisis, international diplomacy, Nobel controversy
+  if (
+    text.includes('league of nations') ||
+    text.includes('war') ||
+    text.includes('crisis') ||
+    text.includes('boycott') ||
+    text.includes('persecution') ||
+    text.includes('exile') ||
+    text.includes('political') ||
+    text.includes('reconciliation') ||
+    text.includes('nobel') ||
+    text.includes('revolution') ||
+    text.includes('icic') ||
+    text.includes('ambulance') ||
+    text.includes('radiolog')
+  ) {
+    return 'crisis';
+  }
+
+  // 3. Journeys, nature, daily encounters, hiking
+  if (
+    text.includes('alps') ||
+    text.includes('glacier') ||
+    text.includes('hiking') ||
+    text.includes('caputh') ||
+    text.includes('tea') ||
+    text.includes('veranda') ||
+    text.includes('journey') ||
+    text.includes('expedition') ||
+    text.includes('travel') ||
+    text.includes('monsoon') ||
+    text.includes('nature') ||
+    text.includes('children') ||
+    text.includes('daughter') ||
+    text.includes('son') ||
+    text.includes('walking')
+  ) {
+    return 'life';
+  }
+
+  // 4. Default: Scientific & Intellectual inquiries
+  return 'intellectual';
+}
 
 interface PeriodWritingDeskSceneProps {
   figure: HistoricalFigure;
@@ -61,6 +181,7 @@ interface PeriodWritingDeskSceneProps {
   onOpenTriadMap: () => void;
   onOpenNetwork: () => void;
   onProceedToStudio: () => void;
+  onOpenSystemDiagram?: () => void;
   onSelectRecipient: (recipient: Recipient) => void;
   onSelectEvent: (event: HistoricalEventOption) => void;
   onSelectTone?: (tone: ToneOption) => void;
@@ -82,6 +203,7 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
   onOpenTriadMap,
   onOpenNetwork,
   onProceedToStudio,
+  onOpenSystemDiagram,
   onSelectRecipient,
   onSelectEvent,
   onSelectTone,
@@ -93,7 +215,7 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
   const [soundEnabled, setSoundEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Zen mode: hides all HUD controls for pure contemplation of the desk
+  // Zen mode: hides HUD controls for pure contemplation of the desk
   const [zenMode, setZenMode] = useState(false);
 
   // Parchment mode: starts 'blank' ("without the texts on the page")
@@ -101,30 +223,39 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
   const [userText, setUserText] = useState('');
   const [copiedNotification, setCopiedNotification] = useState(false);
 
-  // User directive: before user starts to write, they need to select receivers first and then all other elements reveal
+  // Recipient selection state
   const hasReceiver = Boolean(selectedRecipient);
   const activeRecipient = selectedRecipient || null;
+  const [showRecipientPicker, setShowRecipientPicker] = useState(!selectedRecipient);
 
-  // Right-hand Dossier panel toggle & active tab
-  // If receiver is not yet selected, always default to 'recipients' so user selects receiver first
-  const [isDossierCollapsed, setIsDossierCollapsed] = useState(false);
-  const [activeDossierTab, setActiveDossierTab] = useState<'recipients' | 'events' | 'people' | 'tone'>(
-    selectedRecipient ? 'events' : 'recipients'
-  );
-  const [promptReceiverSelection, setPromptReceiverSelection] = useState(false);
-  const [dossierVisualMode, setDossierVisualMode] = useState(true);
+  // Event category filtering
+  const [selectedCategory, setSelectedCategory] = useState<EventCategory>('all');
+  const [showArchivalProof, setShowArchivalProof] = useState(false);
+  const [isEventsCollapsed, setIsEventsCollapsed] = useState(false);
+  const [isNetworkCollapsed, setIsNetworkCollapsed] = useState(true);
+  const [showDeskFullView, setShowDeskFullView] = useState(false);
 
-  // Keep tab on recipients if receiver is cleared
+  // Modern breakdown modal state
+  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+
+  // Whenever selectedRecipient changes, auto-expand or collapse recipient picker and activate archival mode
   useEffect(() => {
     if (!selectedRecipient) {
-      setActiveDossierTab('recipients');
+      setShowRecipientPicker(true);
+    } else {
+      setShowRecipientPicker(false);
+      setWritingMode('archival');
     }
   }, [selectedRecipient]);
 
-  // Breakdown modal state
-  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  // When letter arrives, switch to archival mode
+  useEffect(() => {
+    if (letter) {
+      setWritingMode('archival');
+    }
+  }, [letter]);
 
-  // Desk asset selection based on figure
+  // Desk background and period stationery info
   const deskImageMap: Record<string, {
     src: string;
     penName: string;
@@ -141,17 +272,17 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
     },
     einstein: {
       src: '/assets/einstein_desk.jpg',
-      penName: 'Gold-Trim Fountain Pen',
-      instrumentDescription: 'Glossy black fountain pen with gold trim bands & gold nib',
-      inkDescription: 'Square glass inkwell with midnight black ink',
-      locationNote: 'Princeton Study · Mercer Street, New Jersey'
+      penName: 'Celluloid Fountain Pen',
+      instrumentDescription: '1920s Pelikan 100 marbled black-green barrel',
+      inkDescription: 'Brilliant royal blue fountain ink',
+      locationNote: 'Caputh Summer Veranda · Potsdam, Germany'
     },
     tagore: {
       src: '/assets/tagore_desk.jpg',
-      penName: 'Slender Blonde Wood Dip Pen',
-      instrumentDescription: 'Tapered blonde natural wood dip pen with precision nib',
-      inkDescription: 'Hand-thrown earthen clay ink pot with deep sepia pigment',
-      locationNote: 'Santiniketan Writing Desk · Bengal, India'
+      penName: 'Hand-Carved Reed Pen',
+      instrumentDescription: 'Slender hollowed bamboo reed cut with sharp oblique nib',
+      inkDescription: 'Organic soot black lampblack ink with gum arabic',
+      locationNote: 'Uttarayan Veranda · Santiniketan, Bengal'
     }
   };
 
@@ -167,7 +298,68 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
     ? getHistoricalPeopleBetween(figure.id, activeRecipient.id)
     : [];
 
-  // Sound synthesis for authentic ambient candle crackle and pen scratch
+  // Unified list of selectable events (shared historical episodes or suggested milestones)
+  const allEventsList = sharedEpisodes.length > 0 
+    ? sharedEpisodes.map(ep => ({
+        id: ep.id,
+        title: ep.title,
+        year: ep.year,
+        summary: ep.summary,
+        context: ep.historicalContext,
+        historicalEvidence: ep.historicalEvidence,
+        historicalPeopleInvolved: ep.historicalPeopleInvolved,
+        keyTopics: ep.keyTopics,
+        asOption: episodeToEventOption(ep),
+        category: getEventCategory(ep)
+      }))
+    : figure.suggestedEvents.map(evt => ({
+        id: evt.id,
+        title: evt.title,
+        year: evt.year,
+        summary: evt.context,
+        context: evt.context,
+        historicalEvidence: evt.historicalEvidence,
+        historicalPeopleInvolved: [] as string[],
+        keyTopics: [] as string[],
+        asOption: evt,
+        category: getEventCategory({ title: evt.title, context: evt.context, historicalContext: evt.historicalEvidence })
+      }));
+
+  // Filter events based on active category
+  const filteredEvents = selectedCategory === 'all'
+    ? allEventsList
+    : allEventsList.filter(e => e.category === selectedCategory);
+
+  // Authentic period dispatch on the parchment (either AI-generated or verified archival grounded draft)
+  const effectiveLetter = letter || (activeRecipient ? {
+    id: `grounded-${figure.id}-${activeRecipient.id}`,
+    senderId: figure.id,
+    recipientId: activeRecipient.id,
+    salutation: activeRecipient.id === 'curie' 
+      ? 'Chère Madame Curie,' 
+      : activeRecipient.id === 'einstein'
+      ? 'Lieber Herr Einstein,'
+      : activeRecipient.id === 'tagore'
+      ? 'Revered Gurudev Rabindranath,'
+      : `To my esteemed ${activeRecipient.title || ''} ${activeRecipient.name},`,
+    dateAndLocation: `${figure.city}, ${selectedEvent?.year || figure.era}`,
+    bodyParagraphs: [
+      `I write to you amidst the quiet reflections of our epoch. The matter of ${selectedEvent?.title || 'our recent correspondence'} continues to stir my deepest contemplation.`,
+      selectedEvent?.context 
+        ? `As history marks this juncture: ${selectedEvent.context}. In our shared pursuit of truth and understanding, these questions transcend our individual laboratories and studies.`
+        : `Across the geographical distance between ${figure.city} and ${activeRecipient.location}, the invisible bridge of intellectual kinship remains unshakeable.`,
+      `I remain hopeful that our paths shall soon converge once more. May this dispatch convey my unwavering respect and warm thoughts to you.`
+    ],
+    valediction: figure.id === 'curie' 
+      ? 'With sincere devotion and scientific respect,' 
+      : figure.id === 'einstein' 
+      ? 'With warmest regards and friendly esteem,' 
+      : 'In eternal harmony and affection,',
+    postScriptum: selectedEvent?.historicalEvidence ? `P.S. Regarding our discourse: "${selectedEvent.historicalEvidence}"` : undefined,
+    generationSource: 'archive-engine' as const
+  } : null);
+
+  // Sound synthesis for authentic ambient pen scratching
   const playSoundEffect = (type: 'scratch' | 'crackle' | 'dip') => {
     if (!soundEnabled) return;
     try {
@@ -208,40 +400,47 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
     }
   };
 
-  // Handle typing inside the parchment if user opts into interactive writing
   const handleUserTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setUserText(e.target.value);
     playSoundEffect('scratch');
   };
-
-  // Switch to archival view whenever a new letter arrives
-  useEffect(() => {
-    if (letter && writingMode === 'blank') {
-      // Keep blank initially as user requested, but if generated by explicit click, switch
-    }
-  }, [letter]);
 
   const handleGenerateClick = () => {
     playSoundEffect('scratch');
     if (onGenerateLetter) {
       onGenerateLetter();
     }
-    // Switch to archival viewing mode
     setWritingMode('archival');
   };
 
-  const handleEpisodeSelect = (ep: HistoricalSharedEpisode) => {
-    const eventOption = episodeToEventOption(ep);
+  const handleSelectRecipientCard = (rec: Recipient) => {
+    onSelectRecipient(rec);
+    setShowRecipientPicker(false);
+    setShowDeskFullView(false);
+    playSoundEffect('scratch');
+  };
+
+  const handleSelectEventItem = (eventOption: HistoricalEventOption) => {
     onSelectEvent(eventOption);
     playSoundEffect('scratch');
   };
 
+  // Compute transit vehicle icon
+  const getTransitIcon = (t: string) => {
+    const s = (t || '').toLowerCase();
+    if (s.includes('hour') || s.includes('local') || s.includes('train')) return '🚂';
+    if (s.includes('steamer') || s.includes('ship') || s.includes('sea') || s.includes('ocean')) return '🚢';
+    if (s.includes('horse') || s.includes('courier')) return '🐎';
+    if (s.includes('air')) return '🛩️';
+    return '📬';
+  };
+
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden bg-[#160D08] select-none flex flex-col justify-between">
+    <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-y-auto bg-[#140C07] select-none flex flex-col justify-between">
       
       {/* 1. PHOTOREALISTIC DESK BACKGROUND */}
       <div 
-        className="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
+        className="fixed inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
         style={{
           backgroundImage: `url('${deskInfo.src}')`,
           backgroundPosition: 'center center',
@@ -251,29 +450,29 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
 
       {/* 2. ATMOSPHERIC CANDLELIGHT FLICKER OVERLAY */}
       <div 
-        className="absolute inset-0 pointer-events-none mix-blend-screen opacity-40 animate-pulse"
+        className="fixed inset-0 pointer-events-none mix-blend-screen opacity-40 animate-pulse"
         style={{
-          background: `radial-gradient(ellipse at 88% 25%, rgba(255, 185, 80, 0.45) 0%, rgba(212, 120, 20, 0.15) 35%, transparent 70%)`,
+          background: `radial-gradient(ellipse at 85% 20%, rgba(255, 185, 80, 0.45) 0%, rgba(212, 120, 20, 0.15) 35%, transparent 70%)`,
           animationDuration: '3.5s'
         }}
       />
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at 50% 50%, transparent 55%, rgba(12, 7, 4, 0.65) 100%)`
+          background: `radial-gradient(circle at 50% 50%, transparent 45%, rgba(12, 7, 4, 0.75) 100%)`
         }}
       />
 
       {/* 3. TOP FLOATING HUD & NAVIGATION BAR */}
-      <header className={`relative z-30 transition-all duration-300 px-4 sm:px-8 pt-4 pb-2 flex items-center justify-between ${
+      <header className={`relative z-30 transition-all duration-300 px-4 sm:px-8 pt-3 pb-2 flex items-center justify-between ${
         zenMode ? 'opacity-0 -translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'
       }`}>
-        {/* Left: Change Pen & Writer Bio */}
+        {/* Left: Return to Pens */}
         <div className="flex items-center gap-3">
           <button
             id="btn-desk-back-to-pens"
             onClick={onBackToPens}
-            className="flex items-center gap-2 rounded-xl border border-[#8C6D46]/40 bg-[#1C120B]/85 px-3.5 py-2 text-xs font-serif font-medium text-[#F5EDE3] shadow-lg backdrop-blur-md transition hover:border-[#D4AF37] hover:bg-[#2B1B10] hover:text-[#FFF]"
+            className="flex items-center gap-2 rounded-xl border border-[#8C6D46]/40 bg-[#1C120B]/85 px-3.5 py-1.5 text-xs font-serif font-medium text-[#F5EDE3] shadow-lg backdrop-blur-md transition hover:border-[#D4AF37] hover:bg-[#2B1B10] hover:text-[#FFF]"
             title="Return to the Three Pens desk"
           >
             <ArrowLeft className="h-4 w-4 text-[#D4AF37]" />
@@ -296,1228 +495,617 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
           </div>
         </div>
 
-        {/* Right: Desk Controls & Mode Toggles */}
+        {/* Right: Desk Controls & System Diagram */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Sound Toggle */}
+          {/* Audio toggle */}
           <button
-            id="btn-desk-toggle-sound"
+            id="btn-desk-sound-toggle"
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="flex items-center gap-1.5 rounded-lg border border-[#523825]/60 bg-[#1A1009]/80 px-2.5 py-1.5 text-xs text-[#C5B3A1] backdrop-blur-sm transition hover:border-[#D4AF37] hover:text-[#FFF]"
-            title={soundEnabled ? 'Mute desk audio' : 'Enable candle & pen tactile audio'}
+            className={`p-2 rounded-xl border backdrop-blur-md transition ${
+              soundEnabled
+                ? 'border-[#D4AF37] bg-[#2C1C12] text-[#D4AF37]'
+                : 'border-[#8C6D46]/30 bg-[#1A110B]/80 text-[#9E8B7A] hover:text-[#FFF]'
+            }`}
+            title={soundEnabled ? 'Disable pen sounds' : 'Enable authentic nib scratching'}
           >
-            {soundEnabled ? <Volume2 className="h-3.5 w-3.5 text-[#D4AF37]" /> : <VolumeX className="h-3.5 w-3.5 text-[#705F52]" />}
-            <span className="hidden md:inline text-[11px]">{soundEnabled ? 'Sound On' : 'Muted'}</span>
+            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </button>
 
-          {/* Triad Star Map */}
-          <button
-            id="btn-desk-open-triad"
-            onClick={onOpenTriadMap}
-            className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46]/40 bg-[#1F140D]/80 px-3 py-1.5 text-xs font-medium text-[#E3D4C4] backdrop-blur-sm transition hover:border-[#D4AF37] hover:bg-[#2D1B11] hover:text-[#FFF]"
-          >
-            <Layers className="h-3.5 w-3.5 text-[#D4AF37]" />
-            <span className="hidden sm:inline">Triad Map</span>
-          </button>
-
-          {/* Recipient Network */}
-          <button
-            id="btn-desk-open-network"
-            onClick={onOpenNetwork}
-            className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46]/40 bg-[#1F140D]/80 px-3 py-1.5 text-xs font-medium text-[#E3D4C4] backdrop-blur-sm transition hover:border-[#D4AF37] hover:bg-[#2D1B11] hover:text-[#FFF]"
-          >
-            <Share2 className="h-3.5 w-3.5 text-[#D4AF37]" />
-            <span className="hidden sm:inline">Network</span>
-          </button>
-
-          {/* Zen View (Hide UI) */}
-          <button
-            id="btn-desk-zen-mode"
-            onClick={() => setZenMode(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-[#664630]/60 bg-[#1A1009]/80 px-2.5 py-1.5 text-xs text-[#C5B3A1] backdrop-blur-sm transition hover:border-[#D4AF37] hover:text-[#FFF]"
-            title="Hide controls for atmospheric view"
-          >
-            <EyeOff className="h-3.5 w-3.5 text-[#C5B3A1]" />
-            <span className="hidden md:inline text-[11px]">Atmosphere</span>
-          </button>
+          {/* System Diagram Button */}
+          {onOpenSystemDiagram && (
+            <button
+              id="btn-desk-system-specs"
+              onClick={onOpenSystemDiagram}
+              className="flex items-center gap-1.5 rounded-xl border border-[#B8860B] bg-[#2A2115]/90 px-3 py-1.5 text-xs font-semibold text-[#F5D580] shadow-md backdrop-blur-md transition hover:border-[#F5D580] hover:bg-[#382B1B]"
+              title="System Architecture Diagram"
+            >
+              <Cpu className="h-3.5 w-3.5 text-[#D4AF37]" />
+              <span>System Diagram</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Zen Mode Wake Button */}
-      {zenMode && (
-        <button
-          onClick={() => setZenMode(false)}
-          className="absolute top-4 right-4 z-40 flex items-center gap-1.5 rounded-full border border-[#8C6D46]/50 bg-[#1F130B]/80 px-3 py-1.5 text-xs font-serif text-[#D4AF37] backdrop-blur-md transition hover:bg-[#2E1C10]"
-        >
-          <Eye className="h-3.5 w-3.5" />
-          <span>Show Controls</span>
-        </button>
-      )}
-
-      {/* 4. MAIN DESK WORKSPACE: DUAL PANE LAYOUT (Parchment on Left, Dispatch Dossier on Right) */}
-      <div className="relative z-20 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 flex flex-col lg:flex-row gap-6 items-stretch justify-between">
+      {/* ========================================================================= */}
+      {/* 4. MAIN CENTRAL STAGE: THE PARCHMENT AS THE GLORIOUS CENTERPIECE          */}
+      {/* User intent: Floating elements over the parchment, no detached sidebars   */}
+      {/* ========================================================================= */}
+      <main className="relative z-20 flex-1 w-full max-w-4xl mx-auto px-3 sm:px-6 py-2 flex flex-col items-stretch">
         
-        {/* ========================================================================= */}
-        {/* LEFT PANE: THE PERIOD PARCHMENT SHEET */}
-        {/* ========================================================================= */}
-        <div className={`flex flex-col justify-center transition-all duration-500 ${
-          isDossierCollapsed ? 'w-full max-w-3xl mx-auto' : 'w-full lg:w-[48%] xl:w-[44%]'
-        }`}>
-          
-          {/* Parchment Sub-header Toolbar */}
-          {!zenMode && (
-            <div className="mb-2 flex items-center justify-between px-2 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-cinzel text-[11px] font-bold text-[#EEDCC9] tracking-wider">
-                  {!hasReceiver && 'Parchment : Awaiting Recipient'}
-                  {hasReceiver && writingMode === 'blank' && 'Parchment : Clean & Untouched'}
-                  {hasReceiver && writingMode === 'interactive' && 'Parchment : Pen in Hand'}
-                  {hasReceiver && writingMode === 'archival' && 'Parchment : Historical Transcript'}
+        {(!hasReceiver || showDeskFullView) ? (
+          /* =================================================================== */
+          /* PURE FLOATING TRANSPARENT NETWORK (完全透明、无底色，露出书桌信纸与钢笔) */
+          /* =================================================================== */
+          <div className="flex-1 flex flex-col justify-between py-2 sm:py-3 w-full animate-in fade-in duration-300">
+            
+            {/* Top Transparent Title */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-2 mb-1">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1C120B]/85 border border-[#8C6D46]/60 backdrop-blur-md shadow-lg">
+                <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
+                <span className="font-cinzel text-xs sm:text-sm font-bold tracking-wider text-[#F5EFEB]">
+                  CORRESPONDENTS
+                </span>
+                <span className="text-[11px] text-[#D8C7B5] font-serif hidden sm:inline">
+                  · Select a node to address letter
                 </span>
               </div>
 
-              {/* Mode switch actions only visible once receiver is selected */}
-              {hasReceiver && (
-                <div className="flex items-center gap-1.5">
-                  {writingMode === 'blank' ? (
-                    <button
-                      id="btn-desk-start-penning"
-                      onClick={() => {
-                        setWritingMode('interactive');
-                        playSoundEffect('scratch');
-                      }}
-                      className="flex items-center gap-1 rounded bg-[#2D1B11]/90 border border-[#8C6D46]/50 px-2 py-0.5 text-[10px] font-serif text-[#D4AF37] hover:bg-[#3D2517] transition"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                      <span>Pen Freeform</span>
-                    </button>
-                  ) : (
-                    <button
-                      id="btn-desk-clear-parchment"
-                      onClick={() => {
-                        setWritingMode('blank');
-                        setUserText('');
-                      }}
-                      className="flex items-center gap-1 rounded bg-[#2D1B11]/90 border border-[#8C6D46]/50 px-2 py-0.5 text-[10px] font-serif text-[#C5B3A1] hover:text-[#FFF] hover:bg-[#3D2517] transition"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      <span>Clear Paper</span>
-                    </button>
-                  )}
+              {hasReceiver && showDeskFullView && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeskFullView(false)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#3D2617] text-[#F3EFE6] border border-[#D4AF37] text-xs font-serif hover:bg-[#52331F] transition shadow-md"
+                >
+                  <Feather className="h-3.5 w-3.5 text-[#D4AF37]" />
+                  <span>Return to Parchment (To: {activeRecipient?.name})</span>
+                </button>
+              )}
+            </div>
 
-                  {letter && writingMode !== 'archival' && (
-                    <button
-                      id="btn-desk-load-letter"
-                      onClick={() => setWritingMode('archival')}
-                      className="flex items-center gap-1 rounded bg-[#2D1B11]/90 border border-[#8C6D46]/50 px-2 py-0.5 text-[10px] font-serif text-[#E0C9A6] hover:bg-[#3D2517] transition"
-                    >
-                      <BookOpen className="h-3 w-3" />
-                      <span>View Letter</span>
-                    </button>
+            {/* Recipient Network Web: 100% transparent, floating directly on desk */}
+            <div className="w-full my-auto py-2">
+              <RecipientNetworkWeb
+                sender={figure}
+                recipients={figure.recipients}
+                selectedRecipient={activeRecipient}
+                onSelectRecipient={handleSelectRecipientCard}
+              />
+            </div>
+
+            {/* Bottom Floating Bar when exploring network */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-[#8C6D46]/30 px-2 mt-auto">
+              <div className="flex items-center gap-2">
+                {onOpenSystemDiagram && (
+                  <button
+                    id="btn-desk-bottom-system-diagram"
+                    onClick={onOpenSystemDiagram}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#B8860B] bg-[#2A2115]/90 text-[#F5D580] hover:bg-[#382B1B] text-xs font-semibold shadow-md transition"
+                    title="View System Architecture & Triad Specs"
+                  >
+                    <Cpu className="h-3.5 w-3.5 text-[#D4AF37]" />
+                    <span>System Diagram</span>
+                  </button>
+                )}
+                <span className="text-xs text-[#D8C7B5] font-serif hidden sm:inline italic">
+                  Parchment paper & pen poised on {figure.name}'s desk
+                </span>
+              </div>
+
+              <span className="text-xs text-[#D4AF37] font-serif font-medium bg-[#1C120B]/85 px-3 py-1.5 rounded-lg border border-[#8C6D46]/40 shadow-sm">
+                Select any correspondent node above to begin writing
+              </span>
+            </div>
+
+          </div>
+        ) : (
+          /* =================================================================== */
+          /* WRITING PARCHMENT SHEET (已选定收信人，展开信纸进行落笔与信件阅读)    */
+          /* =================================================================== */
+          <div 
+            id="writing-parchment-sheet"
+            className="relative w-full rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] border-2 border-[#B8966E] p-4 sm:p-7 flex flex-col transition-all duration-500 text-[#2C180B] min-h-[660px] animate-in fade-in duration-300"
+            style={{
+              backgroundColor: '#FAF3E7',
+              backgroundImage: `
+                radial-gradient(ellipse at 50% 8%, rgba(255,255,255,0.45) 0%, rgba(235,215,190,0.2) 100%),
+                repeating-linear-gradient(to bottom, transparent, transparent 31px, rgba(140, 109, 70, 0.07) 31px, rgba(140, 109, 70, 0.07) 32px)
+              `,
+              boxShadow: '0 20px 50px rgba(10,5,2,0.85), inset 0 0 45px rgba(140,90,45,0.08)'
+            }}
+          >
+            {/* Deckled Edge Inner Border & Watermark */}
+            <div className="absolute inset-2 sm:inset-3 border border-[#8C6D46]/25 rounded-xl pointer-events-none" />
+            <div className="absolute top-5 right-6 opacity-[0.06] pointer-events-none select-none font-cinzel text-5xl font-bold tracking-widest text-[#4A2D1A]">
+              {figure.id.toUpperCase()}
+            </div>
+
+            {/* Authentic Stationery Letterhead on Parchment Paper */}
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 pb-2.5 mb-2 border-b border-[#8C6D46]/25 text-[#5A3822] font-serif select-none">
+              <div className="flex items-center gap-2">
+                <span className="font-cinzel text-xs sm:text-sm font-bold tracking-wider text-[#3D2211]">
+                  {figure.name}
+                </span>
+                <span className="text-[#8C6D46]/60">·</span>
+                <span className="text-xs italic text-[#70482B]">
+                  {deskInfo.locationNote}
+                </span>
+              </div>
+              <div className="text-xs sm:text-[13px] italic text-[#664630]">
+                {effectiveLetter?.dateAndLocation || `${figure.city}, ${figure.era}`}
+              </div>
+            </div>
+
+            {/* =================================================================== */}
+            {/* FLOATING LAYER 1: RECIPIENT NETWORK WEB (网状结构，透明底，无背景)   */}
+            {/* Transparent floating constellation over the parchment paper         */}
+            {/* =================================================================== */}
+            <section className="relative z-30 mb-2">
+              <div className="flex items-center justify-between px-1 mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#B8860B]" />
+                  <h3 className="font-cinzel text-xs sm:text-sm font-bold tracking-wider text-[#3D2211]">
+                    CORRESPONDENTS
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsNetworkCollapsed(!isNetworkCollapsed)}
+                    className="flex items-center gap-1 text-[11px] font-serif text-[#70482B] hover:text-[#2C180B] px-2 py-0.5 rounded border border-[#C5A882]/50 bg-[#FAF3E6]/70 transition shadow-xs"
+                    title={isNetworkCollapsed ? "Expand full network web" : "Collapse to compact strip"}
+                  >
+                    <span>{isNetworkCollapsed ? '🕸️ View Network' : '▲ Compact Strip'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeskFullView(true)}
+                    className="flex items-center gap-1 text-[11px] font-serif text-[#70482B] hover:text-[#2C180B] px-2 py-0.5 rounded border border-[#C5A882]/50 bg-[#FAF3E6]/70 transition shadow-xs"
+                    title="View full desk and fountain pen"
+                  >
+                    <span>👁️ Full Desk View</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* If collapsed: compact horizontal recipient strip (does not block letter!) */}
+              {isNetworkCollapsed ? (
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1 scrollbar-none">
+                  {figure.recipients.map((rec) => {
+                    const isSelected = activeRecipient?.id === rec.id;
+                    return (
+                      <button
+                        key={rec.id}
+                        type="button"
+                        onClick={() => handleSelectRecipientCard(rec)}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-serif transition shrink-0 border ${
+                          isSelected
+                            ? 'bg-[#3D2517] text-[#F5EFEB] font-bold border-[#D4AF37] shadow-xs scale-105'
+                            : 'bg-[#EFE5D3]/90 text-[#5A3822] hover:bg-[#E2D2BC] border-[#C5A882]/50'
+                        }`}
+                      >
+                        <img
+                          src={getPortraitForPerson(rec.id, rec.name)}
+                          alt={rec.name}
+                          className="w-5 h-5 rounded-full object-cover border border-[#8C6D46]/40"
+                        />
+                        <span>{rec.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* If expanded: 100% transparent floating network web */
+                <div className="relative w-full py-1">
+                  <RecipientNetworkWeb
+                    sender={figure}
+                    recipients={figure.recipients}
+                    selectedRecipient={activeRecipient}
+                    onSelectRecipient={handleSelectRecipientCard}
+                  />
+                </div>
+              )}
+            </section>
+
+          {/* =================================================================== */}
+          {/* FLOATING LAYER 2: CATEGORIZED EVENTS                                */}
+          {/* =================================================================== */}
+          {hasReceiver && (
+            <section className="relative z-20 mb-3 rounded-xl border border-[#C5A882]/70 bg-[#FAF3E6]/85 backdrop-blur-sm p-3 shadow-xs text-[#2C180B] transition-all">
+              
+              {/* Event Header & Category Tabs (Guaranteed not to overflow on any screen) */}
+              <div className="flex flex-col gap-2 pb-2 mb-2 border-b border-[#C5A882]/40">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-[#B8860B] flex-shrink-0" />
+                    <span className="font-cinzel text-xs sm:text-sm font-bold text-[#3D2211] tracking-wider truncate">
+                      HISTORICAL CONTEXT
+                    </span>
+                    {selectedEvent && (
+                      <span className="text-[11px] font-serif text-[#70482B] truncate hidden md:inline">
+                        · {selectedEvent.title.replace(/\s*\(\d{4}\).*$/, '').trim()}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Collapse / Expand Toggle */}
+                  <button
+                    onClick={() => setIsEventsCollapsed(!isEventsCollapsed)}
+                    className="flex-shrink-0 px-2 py-0.5 rounded text-[10.5px] font-serif text-[#664630] hover:text-[#2C180B] hover:bg-[#EFE3CF]/60 border border-[#C5A882]/40 transition"
+                    title={isEventsCollapsed ? "Expand historical events" : "Collapse historical events"}
+                  >
+                    {isEventsCollapsed ? "Expand" : "Collapse"}
+                  </button>
+                </div>
+
+                {/* Category Filter Pills (cleanly wrapped, never overflows) */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {EVENT_CATEGORIES.map((cat) => {
+                    const count = cat.id === 'all' 
+                      ? allEventsList.length 
+                      : allEventsList.filter(e => e.category === cat.id).length;
+                    const isActive = selectedCategory === cat.id;
+
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-serif transition whitespace-nowrap ${
+                          isActive
+                            ? 'bg-[#B8860B] text-[#FFF] font-bold shadow-xs'
+                            : 'bg-[#EFE5D3] text-[#5A3822] hover:bg-[#E2D2BC] border border-[#C5A882]/40'
+                        }`}
+                        title={cat.description}
+                      >
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                        <span className={`text-[9px] px-1 rounded-full ${
+                          isActive ? 'bg-[#FFF]/25 text-[#FFF]' : 'bg-[#FAF3E6] text-[#70482B]'
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Categorized Events Scrollable Row / Grid */}
+              {!isEventsCollapsed && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {filteredEvents.length === 0 ? (
+                    <div className="col-span-full py-3 text-center text-xs font-serif text-[#70482B] italic">
+                      No historical events recorded under this category for this correspondent.
+                    </div>
+                  ) : (
+                    filteredEvents.map((item) => {
+                      const isSelected = selectedEvent?.id === item.id;
+                      const categoryInfo = EVENT_CATEGORIES.find(c => c.id === item.category);
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => handleSelectEventItem(item.asOption)}
+                          className={`group relative p-2.5 rounded-lg border cursor-pointer transition-all duration-200 ${
+                            isSelected
+                              ? 'border-[#B8860B] bg-[#F7EFE0] ring-1 ring-[#B8860B] shadow-xs'
+                              : 'border-[#D5C2AA]/70 bg-[#FFFDF9]/80 hover:border-[#B8860B] hover:bg-[#FFF] text-[#3D2517]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[10px] font-bold text-[#6E421F] bg-[#EFE3CF] px-1.5 py-0.5 rounded border border-[#C5A882]/40">
+                                {item.year}
+                              </span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#FAF3E6] text-[#70482B] border border-[#C5A882]/30">
+                                {categoryInfo?.icon} {categoryInfo?.label}
+                              </span>
+                            </div>
+                            {isSelected && <Check className="h-3 w-3 text-[#B8860B] flex-shrink-0" />}
+                          </div>
+
+                          <h5 className="font-cinzel text-xs font-bold text-[#2C180B] line-clamp-1 mb-1">
+                            {item.title.replace(/\s*\(\d{4}\).*$/, '').trim()}
+                          </h5>
+
+                          <p className="text-[10px] font-serif text-[#5A3822] line-clamp-2 leading-relaxed">
+                            {item.summary}
+                          </p>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               )}
-            </div>
+
+              {/* Selected Event Details & Contemporary Witnesses Bar */}
+              {selectedEvent && !isEventsCollapsed && (
+                <div className="mt-2.5 pt-2 border-t border-[#C5A882]/40 flex flex-wrap items-center justify-between gap-2 text-[11px] font-serif text-[#5A3822]">
+                  <div className="flex items-center gap-1.5 truncate max-w-full sm:max-w-md">
+                    <span className="text-[#B8860B] font-bold">📌 Event:</span>
+                    <span className="font-semibold text-[#2C180B] truncate">
+                      {selectedEvent.title.replace(/\s*\(\d{4}\).*$/, '').trim()} ({selectedEvent.year})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {sharedPeople.length > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-[#70482B]">
+                        <Users className="h-3 w-3 text-[#B8860B]" />
+                        <span>Witnesses: {sharedPeople.slice(0, 3).join(', ')}</span>
+                      </div>
+                    )}
+                    {selectedEvent.historicalEvidence && (
+                      <button
+                        onClick={() => setShowArchivalProof(!showArchivalProof)}
+                        className="text-[10px] font-serif text-[#B8860B] hover:text-[#2C180B] underline flex items-center gap-0.5"
+                      >
+                        <span>Archival Proof</span>
+                        {showArchivalProof ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Expanded Archival Quote & Historical Citations */}
+              {showArchivalProof && selectedEvent && !isEventsCollapsed && (
+                <div className="mt-2 p-2.5 rounded-lg border border-[#C5A882]/50 bg-[#EFE3CF]/60 text-[11px] font-serif text-[#3D2517] animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2">
+                    <Quote className="h-4 w-4 text-[#B8860B] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="italic text-[#2C180B]">
+                        "{selectedEvent.historicalEvidence}"
+                      </p>
+                      <p className="mt-1 text-[10px] text-[#70482B]">
+                        Historical context: {selectedEvent.context}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </section>
           )}
 
-          {/* THE PARCHMENT PAPER CONTAINER */}
-          <div 
-            className="relative w-full rounded-sm min-h-[460px] sm:min-h-[520px] max-h-[75vh] p-6 sm:p-8 flex flex-col justify-between transition-all duration-500 overflow-y-auto"
-            style={{
-              background: 'transparent',
-            }}
-          >
-            {/* 0. STATE: AWAITING RECEIVER SELECTION */}
-            {!hasReceiver ? (
-              <div 
-                className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 cursor-pointer group"
-                onClick={() => {
-                  setActiveDossierTab('recipients');
-                  setPromptReceiverSelection(true);
-                  setTimeout(() => setPromptReceiverSelection(false), 2500);
-                }}
-              >
-                <div className="w-16 h-16 rounded-full bg-[#2B1B10]/70 border-2 border-dashed border-[#D4AF37]/50 flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform duration-300 animate-pulse">
-                  <Feather className="h-7 w-7 text-[#D4AF37]" />
-                </div>
-
-                <div className="space-y-1.5 max-w-xs">
-                  <h4 className="font-cinzel text-base font-bold text-[#3D2211] tracking-wider uppercase">
-                    Parchment Awaiting Recipient
-                  </h4>
-                  <p className="font-serif text-xs text-[#5C3920] leading-relaxed">
-                    Select a letter receiver from the philatelic stamps on the right. Once chosen, mutual historical episodes, witness cameos, and pen controls will reveal.
-                  </p>
-                </div>
-
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#3D2211]/15 border border-[#8C6D46]/40 text-[#3D2211] text-xs font-serif font-semibold shadow-sm">
-                  <Lock className="h-3.5 w-3.5 text-[#8C6D46]" />
-                  <span>Choose Receiver on Right to Unlock</span>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* 1. STATE: PURE BLANK PARCHMENT */}
-                {writingMode === 'blank' && (
+          {/* =================================================================== */}
+          {/* FLOATING LAYER 3: PARCHMENT MANUSCRIPT (信纸正文落款与书写区)         */}
+          {/* =================================================================== */}
+          <div className="flex-1 flex flex-col pt-1 sm:pt-2">
+            
+            {/* 1. STATE: BLANK PARCHMENT */}
+            {writingMode === 'blank' && (
                   <div 
-                    className="flex-1 flex flex-col items-center justify-center text-center p-4 cursor-pointer group"
+                    className="flex-1 flex flex-col items-center justify-center text-center p-6 cursor-pointer group my-4 rounded-xl border border-[#8C6D46]/15 hover:border-[#8C6D46]/40 transition"
                     onClick={() => {
                       setWritingMode('interactive');
                       playSoundEffect('scratch');
                     }}
-                    title="Tap anywhere to take up the pen and write"
+                    title="Click anywhere to take up the pen and write"
                   >
-                    <div className="opacity-0 group-hover:opacity-90 transition-opacity duration-300 flex flex-col items-center gap-2 bg-[#2B1B10]/70 p-4 rounded-xl border border-[#8C6D46]/40 backdrop-blur-sm max-w-xs shadow-xl">
-                      <Feather className="h-6 w-6 text-[#D4AF37]" />
-                      <span className="font-serif text-xs text-[#F2DFCE] tracking-wider leading-relaxed">
-                        Parchment addressed to {activeRecipient?.name}. Tap to write freeform, or choose a historical event on the right to pen a letter.
-                      </span>
+                    <div className="flex flex-col items-center gap-2 p-4 rounded-xl max-w-md">
+                      <Feather className="h-8 w-8 text-[#8C6D46] group-hover:text-[#D4AF37] group-hover:scale-110 transition duration-300" />
+                      <h4 className="font-cinzel text-sm font-bold text-[#3D2211]">
+                        Parchment Ready on {figure.name}'s Desk
+                      </h4>
+                      <p className="font-serif text-xs text-[#5A3822] leading-relaxed">
+                        Addressed to <strong className="text-[#2C180B]">{activeRecipient?.name}</strong>.
+                        <br />
+                        Click to pen freeform thoughts, or click <strong className="text-[#2C180B]">"Pen Historical Letter"</strong> below to channel their authentic 1911-1930 cadence.
+                      </p>
                     </div>
                   </div>
                 )}
 
-            {/* 2. STATE: INTERACTIVE FREELANCE WRITING */}
-            {writingMode === 'interactive' && (
-              <div className="flex-1 flex flex-col">
-                <div className="mb-2 text-right">
-                  <span className="font-serif text-[11px] text-[#5A3822] italic">
-                    From the desk of {figure.name} to {activeRecipient.name}
-                  </span>
-                </div>
+                {/* 2. STATE: INTERACTIVE FREELANCE WRITING */}
+                {writingMode === 'interactive' && (
+                  <div className="flex-1 flex flex-col">
+                    <div className="mb-2 flex items-center justify-between text-xs font-serif text-[#5A3822] border-b border-[#664630]/15 pb-1">
+                      <span className="italic">{deskInfo.locationNote}</span>
+                      <span>From {figure.name} to {activeRecipient?.name}</span>
+                    </div>
 
-                <textarea
-                  id="parchment-user-textarea"
-                  value={userText}
-                  onChange={handleUserTextChange}
-                  placeholder={`Write your letter here in the hand of ${figure.name}, addressing ${activeRecipient.name}...`}
-                  className="w-full flex-1 bg-transparent resize-none outline-none font-serif text-sm sm:text-base leading-relaxed text-[#2C180B] placeholder-[#664630]/70 select-text"
-                  autoFocus
-                  style={{
-                    lineHeight: '1.8',
-                    fontFamily: "'Playfair Display', Georgia, serif"
-                  }}
-                />
+                    <textarea
+                      id="parchment-user-textarea"
+                      value={userText}
+                      onChange={handleUserTextChange}
+                      placeholder={`Write your letter here in the hand of ${figure.name}, addressing ${activeRecipient?.name}...`}
+                      className="w-full flex-1 bg-transparent resize-none outline-none font-serif text-sm sm:text-base leading-relaxed text-[#2C180B] placeholder-[#664630]/60 select-text min-h-[220px]"
+                      autoFocus
+                      style={{
+                        lineHeight: '1.9',
+                        fontFamily: "'Playfair Display', Georgia, serif"
+                      }}
+                    />
 
-                <div className="mt-4 pt-2 border-t border-[#664630]/20 flex items-center justify-between text-[11px] font-serif text-[#5A3822]">
-                  <span>{userText.trim().split(/\s+/).filter(Boolean).length} words penned</span>
-                  <button
-                    onClick={() => {
-                      if (userText) {
-                        navigator.clipboard.writeText(userText);
-                        setCopiedNotification(true);
-                        setTimeout(() => setCopiedNotification(false), 2000);
-                      }
-                    }}
-                    className="hover:text-[#2C180B] underline transition"
-                  >
-                    {copiedNotification ? 'Copied to Clipboard' : 'Copy Text'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* 3. STATE: ARCHIVAL LETTER */}
-            {writingMode === 'archival' && (
-              <div className="flex-1 flex flex-col justify-between font-serif text-[#2C180B] select-text">
-                {isGenerating ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
-                    <Feather className="h-8 w-8 text-[#8C6D46] animate-bounce" />
-                    <p className="font-cinzel text-sm font-semibold text-[#4A2D1A] tracking-wider">
-                      Transcribing Historical Dispatch...
-                    </p>
-                    <p className="text-xs text-[#6A472E] italic max-w-xs">
-                      Channeling {figure.name}'s epistolary cadence to {activeRecipient.name} regarding {selectedEvent?.title || 'their shared history'}...
-                    </p>
+                    <div className="mt-3 pt-2 border-t border-[#664630]/20 flex items-center justify-between text-[11px] font-serif text-[#5A3822]">
+                      <span>{userText.trim().split(/\s+/).filter(Boolean).length} words penned</span>
+                      <button
+                        onClick={() => {
+                          if (userText) {
+                            navigator.clipboard.writeText(userText);
+                            setCopiedNotification(true);
+                            setTimeout(() => setCopiedNotification(false), 2000);
+                          }
+                        }}
+                        className="hover:text-[#2C180B] underline transition"
+                      >
+                        {copiedNotification ? 'Copied to Clipboard' : 'Copy Draft Text'}
+                      </button>
+                    </div>
                   </div>
-                ) : letter ? (
-                  <div>
-                    {/* Salutation & Date */}
-                    <div className="mb-3 flex justify-between items-baseline text-xs text-[#5A3822]">
-                      <span className="italic">{letter.dateAndLocation}</span>
-                      <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-[#4A2D1A]/10 text-[#5A3822]">
-                        {letter.generationSource === 'gemini-agent' ? 'Archival Agent' : 'Archival Record'}
-                      </span>
-                    </div>
+                )}
 
-                    <h4 className="font-serif text-base sm:text-lg font-bold text-[#2C180B] mb-3">
-                      {letter.salutation}
-                    </h4>
+                {/* 3. STATE: ARCHIVAL LETTER DISPATCH */}
+                {writingMode === 'archival' && (
+                  <div className="flex-1 flex flex-col justify-between font-serif text-[#2C180B] select-text">
+                    {isGenerating ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
+                        <Feather className="h-8 w-8 text-[#8C6D46] animate-bounce" />
+                        <p className="font-cinzel text-sm font-semibold text-[#4A2D1A] tracking-wider">
+                          Transcribing Historical Dispatch...
+                        </p>
+                        <p className="text-xs text-[#6A472E] italic max-w-sm">
+                          Channeling {figure.name}'s epistolary cadence to {activeRecipient?.name} regarding {selectedEvent?.title || 'their shared history'}...
+                        </p>
+                      </div>
+                    ) : effectiveLetter ? (
+                      <div className="space-y-3">
+                        {/* Salutation & Date */}
+                        <div className="flex justify-between items-baseline text-xs text-[#5A3822] border-b border-[#664630]/15 pb-1 mb-2">
+                          <span className="italic">{effectiveLetter.dateAndLocation}</span>
+                          <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-[#4A2D1A]/10 text-[#5A3822]">
+                            {effectiveLetter.generationSource === 'gemini-agent' ? 'Archival Synthesis (AI)' : 'Primary Record Draft'}
+                          </span>
+                        </div>
 
-                    {/* Body Paragraphs */}
-                    <div className="space-y-3 text-xs sm:text-sm leading-relaxed text-[#2C180B]">
-                      {letter.bodyParagraphs.map((para, idx) => (
-                        <p key={idx} style={{ textIndent: '1.25rem' }}>{para}</p>
-                      ))}
-                    </div>
+                        <h4 className="font-serif text-base sm:text-lg font-bold text-[#2C180B]">
+                          {effectiveLetter.salutation}
+                        </h4>
 
-                    {/* Valediction */}
-                    <div className="mt-4 text-right">
-                      <p className="font-serif italic text-xs sm:text-sm font-semibold text-[#2C180B]">
-                        {letter.valediction}
-                      </p>
-                      <p className="font-cinzel text-xs font-bold tracking-wider text-[#3D2211] mt-0.5">
-                        {figure.name}
-                      </p>
-                    </div>
+                        {/* Body Paragraphs */}
+                        <div className="space-y-3 text-xs sm:text-sm leading-relaxed text-[#2C180B]">
+                          {effectiveLetter.bodyParagraphs.map((para, idx) => (
+                            <p key={idx} style={{ textIndent: '1.25rem' }}>{para}</p>
+                          ))}
+                        </div>
 
-                    {letter.postScriptum && (
-                      <p className="mt-3 text-[11px] text-[#5A3822] italic border-t border-[#664630]/20 pt-2">
-                        {letter.postScriptum}
-                      </p>
+                        {/* Valediction & Signature */}
+                        <div className="mt-4 flex items-end justify-between pt-2">
+                          <div className="w-12 h-12 rounded-full border-2 border-[#8C2318] bg-[#A1281A] flex items-center justify-center text-[#F5EDE1] shadow-md transform rotate-6 select-none opacity-85">
+                            <span className="font-cinzel text-[10px] font-bold tracking-tighter">SEAL</span>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="font-serif italic text-xs sm:text-sm font-semibold text-[#2C180B]">
+                              {effectiveLetter.valediction}
+                            </p>
+                            <p className="font-cinzel text-xs font-bold tracking-wider text-[#3D2211] mt-0.5">
+                              {figure.name}
+                            </p>
+                          </div>
+                        </div>
+
+                        {effectiveLetter.postScriptum && (
+                          <p className="mt-3 text-[11px] text-[#5A3822] italic border-t border-[#664630]/20 pt-2">
+                            {effectiveLetter.postScriptum}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+                        <BookOpen className="h-6 w-6 text-[#8C6D46] mb-2" />
+                        <p className="text-xs text-[#5A3822] mb-3">
+                          No archival letter inked yet. Select an event category above and tap "Pen Historical Letter".
+                        </p>
+                        <button
+                          onClick={handleGenerateClick}
+                          className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46] bg-[#3D2617] px-3.5 py-1.5 text-xs text-[#F2DFCE] hover:bg-[#52331F] transition shadow"
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />
+                          <span>Pen Letter Now</span>
+                        </button>
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-                    <BookOpen className="h-6 w-6 text-[#8C6D46] mb-2" />
-                    <p className="text-xs text-[#5A3822] mb-3">
-                      No letter penned yet. Select your event and correspondent on the right, then click "Pen Historical Letter".
-                    </p>
-                    <button
-                      onClick={handleGenerateClick}
-                      className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46] bg-[#3D2617] px-3 py-1.5 text-xs text-[#F2DFCE] hover:bg-[#52331F] transition shadow"
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />
-                      <span>Pen Letter Now</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Archival Actions Footer */}
-                {letter && !isGenerating && (
-                  <div className="mt-4 pt-2 border-t border-[#664630]/20 flex items-center justify-between text-[11px] text-[#5A3822]">
-                    <button
-                      onClick={() => setWritingMode('blank')}
-                      className="hover:text-[#2C180B] underline transition"
-                    >
-                      ← Revert to Blank Paper
-                    </button>
-                    <button
-                      onClick={() => setIsBreakdownModalOpen(true)}
-                      className="flex items-center gap-1 font-medium text-[#3D2211] hover:underline"
-                    >
-                      <Info className="h-3 w-3 text-[#8C6D46]" />
-                      <span>Historical Breakdown</span>
-                    </button>
-                  </div>
                 )}
               </div>
-            )}
-              </>
-            )}
 
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* RIGHT PANE: THE EPISTOLARY DOSSIER & CORRESPONDENCE REGISTER */}
-        {/* User request: selection of letter receivers, events and people */}
-        {/* supported by what previously happened between writer and receiver */}
-        {/* ========================================================================= */}
-        {!zenMode && (
-          <div className={`flex flex-col transition-all duration-500 ${
-            isDossierCollapsed ? 'w-10 overflow-hidden' : 'w-full lg:w-[52%] xl:w-[56%]'
-          }`}>
+          {/* =================================================================== */}
+          {/* FLOATING BOTTOM ACTION DOCK (落笔与工具栏，漂浮在信纸底部)           */}
+          {/* =================================================================== */}
+          <div className="relative z-30 mt-4 pt-3 border-t border-[#8C6D46]/25 flex flex-wrap items-center justify-between gap-2.5">
             
-            {/* Dossier Outer Book Wrapper */}
-            <div className="relative flex-1 flex flex-col rounded-xl border border-[#8C6D46]/40 bg-[#160E09]/90 shadow-2xl backdrop-blur-md overflow-hidden text-[#E3D4C4]">
-              
-              {/* Dossier Header Bar */}
-              <div className="p-3.5 border-b border-[#8C6D46]/30 bg-[#1F130B]/90 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {!hasReceiver ? (
-                    <>
-                      <div className="h-2 w-2 rounded-full bg-[#E5A93C] animate-ping" />
-                      <span className="font-cinzel text-xs font-bold text-[#F3EFE6] tracking-wider uppercase">
-                        Step 1: Select Letter Receiver
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                      <span className="font-cinzel text-xs font-bold text-[#F3EFE6] tracking-wider uppercase">
-                        To: {activeRecipient?.name}
-                      </span>
-                      <button
-                        onClick={() => setActiveDossierTab('recipients')}
-                        className="ml-1 text-[10px] text-[#D4AF37] hover:underline"
-                        title="Change letter recipient"
-                      >
-                        (Change)
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 text-xs">
-                  {/* Mode Toggle: Visual vs Text */}
-                  <div className="flex items-center p-0.5 rounded-lg bg-[#25150C] border border-[#8C6D46]/40 text-[10px]">
-                    <button
-                      onClick={() => setDossierVisualMode(true)}
-                      className={`px-2 py-0.5 rounded-md font-sans transition ${
-                        dossierVisualMode
-                          ? 'bg-[#D4AF37] text-[#160E09] font-bold shadow'
-                          : 'text-[#9E8B7A] hover:text-[#FFF]'
-                      }`}
-                      title="Visual Diorama Mode (Minimal Text)"
-                    >
-                      🎨 Visual
-                    </button>
-                    <button
-                      onClick={() => setDossierVisualMode(false)}
-                      className={`px-2 py-0.5 rounded-md font-sans transition ${
-                        !dossierVisualMode
-                          ? 'bg-[#D4AF37] text-[#160E09] font-bold shadow'
-                          : 'text-[#9E8B7A] hover:text-[#FFF]'
-                      }`}
-                      title="Archival Text Mode"
-                    >
-                      📜 Text
-                    </button>
-                  </div>
-
-                  <span className="hidden xl:inline text-[11px] text-[#A69280] font-serif">
-                    <strong className="text-[#E8D9C8]">{figure.name.split(' ')[0]}</strong>
-                  </span>
-                  <button
-                    onClick={() => setIsDossierCollapsed(!isDossierCollapsed)}
-                    className="p-1 rounded hover:bg-[#2F1D11] text-[#A69280] hover:text-[#FFF] transition"
-                    title={isDossierCollapsed ? 'Expand Dossier' : 'Collapse Dossier'}
-                  >
-                    <ChevronRight className={`h-4 w-4 transition-transform ${isDossierCollapsed ? 'rotate-180' : ''}`} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Gating prompt alert if user tries to jump tabs before selecting receiver */}
-              {promptReceiverSelection && (
-                <div className="px-3.5 py-1.5 bg-[#8C5D33]/90 border-b border-[#D4AF37] text-white text-[11px] font-sans flex items-center justify-between animate-fadeIn">
-                  <div className="flex items-center gap-1.5">
-                    <Lock className="h-3 w-3 text-[#FFE699]" />
-                    <span>Please select a letter receiver stamp first. All other elements will reveal.</span>
-                  </div>
-                  <button onClick={() => setPromptReceiverSelection(false)} className="text-white hover:text-[#FFE699]">
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
+            {/* Left: Freeform writing & Copy */}
+            <div className="flex items-center gap-2">
+              {writingMode !== 'interactive' && hasReceiver && (
+                <button
+                  onClick={() => {
+                    setWritingMode('interactive');
+                    playSoundEffect('scratch');
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#8C6D46]/30 bg-[#FAF4EA]/80 text-[#5A3822] hover:text-[#2C180B] hover:border-[#8C6D46] text-xs font-serif transition shadow-xs"
+                >
+                  <Edit3 className="h-3.5 w-3.5 text-[#8C6D46]" />
+                  <span>Freeform Write</span>
+                </button>
               )}
 
-              {/* Dossier Tab Navigation */}
-              <div className="flex items-center border-b border-[#8C6D46]/25 bg-[#1A1009]/80 px-2 pt-1 overflow-x-auto">
+              {effectiveLetter && (
                 <button
-                  id="tab-select-recipient"
-                  onClick={() => setActiveDossierTab('recipients')}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-serif border-b-2 transition whitespace-nowrap ${
-                    activeDossierTab === 'recipients'
-                      ? 'border-[#D4AF37] text-[#D4AF37] font-semibold bg-[#26170E]/50'
-                      : 'border-transparent text-[#9E8B7A] hover:text-[#D4AF37]'
-                  }`}
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                  <span>1. Receivers ({figure.recipients.length})</span>
-                  {!hasReceiver && (
-                    <span className="ml-1 px-1.5 py-0.2 rounded-full bg-[#D4AF37] text-[#160E09] text-[9px] font-mono font-bold animate-pulse">
-                      Select First
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  id="tab-select-events"
                   onClick={() => {
-                    if (!hasReceiver) {
-                      setPromptReceiverSelection(true);
-                      setTimeout(() => setPromptReceiverSelection(false), 2500);
-                      return;
-                    }
-                    setActiveDossierTab('events');
+                    navigator.clipboard.writeText(
+                      `${effectiveLetter.salutation}\n\n${effectiveLetter.bodyParagraphs.join('\n\n')}\n\n${effectiveLetter.valediction}\n${figure.name}`
+                    );
+                    setCopiedNotification(true);
+                    setTimeout(() => setCopiedNotification(false), 2000);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-serif border-b-2 transition whitespace-nowrap ${
-                    !hasReceiver
-                      ? 'opacity-40 cursor-not-allowed border-transparent text-[#6B5A4B]'
-                      : activeDossierTab === 'events'
-                      ? 'border-[#D4AF37] text-[#D4AF37] font-semibold bg-[#26170E]/50'
-                      : 'border-transparent text-[#9E8B7A] hover:text-[#D4AF37]'
-                  }`}
-                  title={!hasReceiver ? 'Select receiver first to unlock mutual events' : 'Mutual Historical Precedents'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#8C6D46]/30 bg-[#FAF4EA]/80 text-[#5A3822] hover:text-[#2C180B] text-xs font-serif transition shadow-xs"
                 >
-                  {!hasReceiver ? <Lock className="h-3 w-3 text-[#8C6D46]" /> : <Calendar className="h-3.5 w-3.5" />}
-                  <span>2. Mutual Events ({hasReceiver ? (sharedEpisodes.length > 0 ? sharedEpisodes.length : figure.suggestedEvents.length) : '—'})</span>
+                  <Check className="h-3.5 w-3.5 text-[#8C6D46]" />
+                  <span>{copiedNotification ? 'Letter Copied' : 'Copy Letter'}</span>
                 </button>
+              )}
 
+              {/* Crucial: System Diagram Button preserved at the bottom */}
+              {onOpenSystemDiagram && (
                 <button
-                  id="tab-select-people"
-                  onClick={() => {
-                    if (!hasReceiver) {
-                      setPromptReceiverSelection(true);
-                      setTimeout(() => setPromptReceiverSelection(false), 2500);
-                      return;
-                    }
-                    setActiveDossierTab('people');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-serif border-b-2 transition whitespace-nowrap ${
-                    !hasReceiver
-                      ? 'opacity-40 cursor-not-allowed border-transparent text-[#6B5A4B]'
-                      : activeDossierTab === 'people'
-                      ? 'border-[#D4AF37] text-[#D4AF37] font-semibold bg-[#26170E]/50'
-                      : 'border-transparent text-[#9E8B7A] hover:text-[#D4AF37]'
-                  }`}
-                  title={!hasReceiver ? 'Select receiver first to unlock contemporaries' : 'Contemporaries & Witnesses'}
+                  id="btn-desk-bottom-system-diagram"
+                  onClick={onOpenSystemDiagram}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#B8860B] bg-[#2A2115] text-[#F5D580] hover:bg-[#382B1B] text-xs font-semibold shadow-xs transition"
+                  title="View System Architecture & Triad Specs"
                 >
-                  {!hasReceiver ? <Lock className="h-3 w-3 text-[#8C6D46]" /> : <Users className="h-3.5 w-3.5" />}
-                  <span>3. People Involved ({hasReceiver ? sharedPeople.length : '—'})</span>
+                  <Cpu className="h-3.5 w-3.5 text-[#D4AF37]" />
+                  <span>System Diagram</span>
                 </button>
+              )}
+            </div>
 
-                <button
-                  id="tab-select-tone"
-                  onClick={() => {
-                    if (!hasReceiver) {
-                      setPromptReceiverSelection(true);
-                      setTimeout(() => setPromptReceiverSelection(false), 2500);
-                      return;
-                    }
-                    setActiveDossierTab('tone');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-serif border-b-2 transition whitespace-nowrap ${
-                    !hasReceiver
-                      ? 'opacity-40 cursor-not-allowed border-transparent text-[#6B5A4B]'
-                      : activeDossierTab === 'tone'
-                      ? 'border-[#D4AF37] text-[#D4AF37] font-semibold bg-[#26170E]/50'
-                      : 'border-transparent text-[#9E8B7A] hover:text-[#D4AF37]'
-                  }`}
-                  title={!hasReceiver ? 'Select receiver first to unlock tone & mood' : 'Tone & Mood'}
-                >
-                  {!hasReceiver ? <Lock className="h-3 w-3 text-[#8C6D46]" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  <span>4. Tone & Mood</span>
-                </button>
-              </div>
-
-              {/* Dossier Body Content Container */}
-              <div className="flex-1 p-4 overflow-y-auto max-h-[50vh] sm:max-h-[54vh] space-y-4 text-xs font-serif">
-                
-                {/* ------------------------------------------------------------- */}
-                {/* TAB 1: LETTER RECEIVER SELECTION */}
-                {/* ------------------------------------------------------------- */}
-                {activeDossierTab === 'recipients' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-cinzel font-bold text-[#E8D9C8] tracking-wider uppercase">
-                        {dossierVisualMode ? 'Correspondent Philatelic Stamps' : 'Select Correspondent'}
-                      </span>
-                      <span className="text-[10px] text-[#A69280] italic">
-                        {dossierVisualMode ? 'Click stamp to select receiver' : 'Click to change correspondent'}
-                      </span>
-                    </div>
-
-                    {dossierVisualMode ? (
-                      /* Visual Philatelic Stamps Grid */
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {figure.recipients.map((rec) => {
-                          const isSelected = activeRecipient.id === rec.id;
-                          return (
-                            <RecipientVisualStamp
-                              key={rec.id}
-                              name={rec.name}
-                              relation={rec.relation}
-                              location={rec.location}
-                              transitDays={rec.transitDays}
-                              isSelected={isSelected}
-                              onClick={() => {
-                                onSelectRecipient(rec);
-                                playSoundEffect('scratch');
-                                setActiveDossierTab('events');
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      /* Text-Based Recipient Cards */
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {figure.recipients.map((rec) => {
-                          const isSelected = activeRecipient.id === rec.id;
-                          return (
-                            <div
-                              key={rec.id}
-                              id={`recipient-card-${rec.id}`}
-                              onClick={() => {
-                                onSelectRecipient(rec);
-                                playSoundEffect('scratch');
-                                setActiveDossierTab('events');
-                              }}
-                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                isSelected
-                                  ? 'border-[#D4AF37] bg-[#2E1C11] shadow-lg text-[#FFF]'
-                                  : 'border-[#664630]/40 bg-[#1A110B]/60 hover:border-[#8C6D46] hover:bg-[#25170E] text-[#D4C4B5]'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-1 mb-1">
-                                <h5 className="font-cinzel text-xs font-bold text-[#F3EFE6]">
-                                  {rec.name}
-                                </h5>
-                                {isSelected && (
-                                  <span className="flex items-center gap-0.5 text-[10px] text-[#D4AF37] font-semibold uppercase">
-                                    <Check className="h-3 w-3" />
-                                    Active
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[11px] text-[#D4AF37] font-serif mb-1">
-                                {rec.relation}
-                              </p>
-                              <p className="text-[10px] text-[#9E8B7A] line-clamp-2 leading-relaxed mb-2">
-                                {rec.title}
-                              </p>
-                              <div className="flex items-center justify-between text-[10px] text-[#8C7A6B] pt-1.5 border-t border-[#523825]/40">
-                                <span className="flex items-center gap-1 truncate max-w-[65%]">
-                                  <MapPin className="h-2.5 w-2.5 text-[#A69280]" />
-                                  {rec.location}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-2.5 w-2.5 text-[#A69280]" />
-                                  {rec.transitDays}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Active Recipient Visual Route & Connection */}
-                    {dossierVisualMode ? (
-                      <div className="mt-3 p-3 rounded-xl border border-[#D4AF37]/40 bg-gradient-to-r from-[#2A160C] to-[#1E110A] shadow-lg">
-                        <div className="flex items-center justify-between text-xs mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-base">🤝</span>
-                            <span className="font-cinzel font-bold text-[#F3EFE6] uppercase tracking-wider text-[11px]">
-                              {figure.name.split(' ')[0]} ⟷ {activeRecipient.name.split(' ')[0]}
-                            </span>
-                          </div>
-                          <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[10px] text-[#D4AF37] font-semibold">
-                            {activeRecipient.relation}
-                          </span>
-                        </div>
-
-                        {/* Visual Route Vector */}
-                        <div className="py-2 px-3 rounded-lg bg-[#140A05]/80 border border-[#8C6D46]/30 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-xs text-[#E5D7C9]">
-                            <span className="w-2 h-2 rounded-full bg-[#38BDF8]" />
-                            <span className="font-mono text-[10px]">{figure.city.split('/')[0].trim()}</span>
-                          </div>
-
-                          <div className="flex-1 mx-3 flex items-center justify-center relative">
-                            <div className="w-full h-0.5 bg-gradient-to-r from-[#38BDF8] via-[#D4AF37] to-[#F59E0B]" />
-                            <span className="absolute px-1.5 py-0.5 rounded bg-[#25150C] border border-[#8C6D46] text-[9px] font-mono text-[#D4AF37] flex items-center gap-1">
-                              <span>{activeRecipient.transitDays.toLowerCase().includes('hour') ? '⚡' : activeRecipient.transitDays.toLowerCase().includes('sea') || activeRecipient.transitDays.toLowerCase().includes('steamer') ? '🚢' : '🚂'}</span>
-                              <span>{activeRecipient.transitDays.split('via')[0].trim()}</span>
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 text-xs text-[#E5D7C9]">
-                            <span className="font-mono text-[10px]">{activeRecipient.location.split(',')[0].trim()}</span>
-                            <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-                          </div>
-                        </div>
-
-                        {/* 1-sentence historical anchor */}
-                        <p className="mt-2 text-[11px] text-[#CDBEAF] font-serif italic line-clamp-2">
-                          "{activeRecipient.historicalConnection}"
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="mt-3 p-3 rounded-lg border border-[#8C6D46]/40 bg-[#251810]/70">
-                        <div className="flex items-center gap-2 mb-1.5 text-xs text-[#D4AF37]">
-                          <Info className="h-3.5 w-3.5" />
-                          <span className="font-semibold uppercase tracking-wider">
-                            Historical Connection with {activeRecipient.name}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#DDD0C2] leading-relaxed mb-2">
-                          {activeRecipient.historicalConnection}
-                        </p>
-                        <div className="text-[11px] text-[#A69280] italic border-t border-[#523825]/40 pt-1.5">
-                          <strong>Archival Stakes:</strong> {activeRecipient.stakes}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ------------------------------------------------------------- */}
-                {/* TAB 2: MUTUAL HISTORICAL EPISODES & EVENTS */}
-                {/* User request: "selection of event and people or sth that is supported */}
-                {/* by the 之前有在writer and receiver之间发生的事情" */}
-                {/* ------------------------------------------------------------- */}
-                {activeDossierTab === 'events' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-xs font-cinzel font-bold text-[#E8D9C8] tracking-wider uppercase block">
-                          Historical Precedents & Shared Episodes
-                        </span>
-                        <span className="text-[10px] text-[#A69280] italic">
-                          Real events that transpired between {figure.name} and {activeRecipient.name}
-                        </span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[10px] text-[#D4AF37]">
-                        {sharedEpisodes.length} Recorded Episodes
-                      </span>
-                    </div>
-
-                    {/* If shared verified episodes exist between this pair */}
-                    {sharedEpisodes.length > 0 ? (
-                      dossierVisualMode ? (
-                        /* Visual Scene Diorama Cards (Minimal text, visual focus) */
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {sharedEpisodes.map((ep) => {
-                              const isSelected = selectedEvent?.id === ep.id || selectedEvent?.title?.includes(ep.title);
-                              const locationLabel = ep.title.includes('Alp')
-                                ? '🇨🇭 Alps'
-                                : ep.title.includes('Solvay')
-                                ? '🇧🇪 Brussels'
-                                : ep.title.includes('Caputh')
-                                ? '🇩🇪 Caputh'
-                                : ep.title.includes('Prague') || ep.title.includes('Defense')
-                                ? '🇫🇷 Paris'
-                                : ep.title.includes('Nobel')
-                                ? '🇸🇪 Stockholm'
-                                : '🏛️ Europe';
-
-                              return (
-                                <div
-                                  key={ep.id}
-                                  id={`episode-card-${ep.id}`}
-                                  onClick={() => handleEpisodeSelect(ep)}
-                                  className={`group relative rounded-xl border overflow-hidden transition-all duration-300 cursor-pointer flex flex-col ${
-                                    isSelected
-                                      ? 'border-[#D4AF37] ring-2 ring-[#D4AF37]/50 shadow-2xl bg-[#28160C]'
-                                      : 'border-[#664630]/40 bg-[#160E08]/80 hover:border-[#A67C52] hover:bg-[#1E110A]'
-                                  }`}
-                                >
-                                  {/* Illustrated Scene Diorama */}
-                                  <div className="relative w-full h-24 overflow-hidden bg-[#0C0603]">
-                                    <SceneIllustration
-                                      sceneType={ep.title}
-                                      title={ep.title}
-                                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#160E08] via-transparent to-black/30 pointer-events-none" />
-
-                                    {/* Floating Badges */}
-                                    <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                                      <span className="px-2 py-0.5 rounded-full bg-[#180E09]/90 border border-[#D4AF37] font-mono text-[10px] font-bold text-[#D4AF37] shadow">
-                                        {ep.year}
-                                      </span>
-                                      <span className="px-2 py-0.5 rounded-full bg-[#180E09]/90 border border-[#8C6D46]/60 text-[9px] text-[#E5D7C9] flex items-center gap-1 shadow">
-                                        <MapPin className="h-2.5 w-2.5 text-[#D4AF37]" />
-                                        {locationLabel}
-                                      </span>
-                                    </div>
-
-                                    {isSelected && (
-                                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-[#D4AF37] text-[#160E09] font-bold text-[9px] flex items-center gap-1 shadow">
-                                        <Check className="h-3 w-3" />
-                                        Active
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Card Lower Bar: Minimalist Title & Topic Pills */}
-                                  <div className="p-2.5 flex-1 flex flex-col justify-between">
-                                    <h5 className="font-cinzel text-xs font-bold text-[#F3EFE6] group-hover:text-[#D4AF37] transition-colors line-clamp-1 mb-1.5">
-                                      {ep.title}
-                                    </h5>
-
-                                    <div className="flex items-center justify-between gap-1 pt-1 border-t border-[#523825]/40 text-[9px]">
-                                      <div className="flex items-center gap-1">
-                                        {ep.keyTopics.slice(0, 2).map((t, idx) => (
-                                          <span
-                                            key={idx}
-                                            className="px-1.5 py-0.5 rounded bg-[#27170E] text-[#D4AF37] border border-[#664630]/40 font-mono"
-                                          >
-                                            {t.split(' ')[0]}
-                                          </span>
-                                        ))}
-                                      </div>
-                                      <span className="text-[#A69280] font-sans flex items-center gap-0.5">
-                                        <Users className="h-2.5 w-2.5 text-[#D4AF37]" />
-                                        {ep.historicalPeopleInvolved.length}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Active Precedent Spotlight Ribbon */}
-                          {selectedEvent && (
-                            <div className="p-3 rounded-xl border border-[#D4AF37]/40 bg-gradient-to-r from-[#2B170D] to-[#1C0E07] shadow-lg">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-[10px] font-cinzel font-bold text-[#D4AF37] uppercase tracking-wider flex items-center gap-1">
-                                  <Sparkles className="h-3 w-3" />
-                                  Selected Memory Anchor: {selectedEvent.title}
-                                </span>
-                                <span className="text-[10px] font-mono text-[#A69280]">
-                                  {selectedEvent.year}
-                                </span>
-                              </div>
-
-                              {/* Primary Quote in Antique Scroll if available */}
-                              {selectedEvent.primaryQuote ? (
-                                <div className="p-2 rounded bg-[#140A05]/80 border-l-2 border-[#D4AF37] text-[11px] text-[#E5D7C9] italic font-serif">
-                                  "{selectedEvent.primaryQuote.text}"
-                                  <div className="text-[9px] text-[#A69280] not-italic font-sans mt-0.5">
-                                    — {selectedEvent.primaryQuote.speaker} ({selectedEvent.primaryQuote.source})
-                                  </div>
-                                </div>
-                              ) : (
-                                <p className="text-[11px] text-[#CDBEAF] font-serif italic">
-                                  "{selectedEvent.summary}"
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        /* Text-Dense Archival Mode */
-                        <div className="space-y-2.5">
-                          {sharedEpisodes.map((ep) => {
-                            const isSelected = selectedEvent?.id === ep.id || selectedEvent?.title?.includes(ep.title);
-                            return (
-                              <div
-                                key={ep.id}
-                                id={`episode-card-${ep.id}`}
-                                onClick={() => handleEpisodeSelect(ep)}
-                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                  isSelected
-                                    ? 'border-[#D4AF37] bg-[#2C1A0F] shadow-lg text-[#FFF]'
-                                    : 'border-[#664630]/40 bg-[#1A110B]/60 hover:border-[#8C6D46] hover:bg-[#23150C] text-[#D4C4B5]'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.5 rounded bg-[#D4AF37]/20 border border-[#D4AF37]/40 font-mono text-[10px] font-bold text-[#D4AF37]">
-                                      {ep.year}
-                                    </span>
-                                    <h5 className="font-cinzel text-xs font-bold text-[#F3EFE6]">
-                                      {ep.title}
-                                    </h5>
-                                  </div>
-                                  {isSelected && (
-                                    <span className="flex items-center gap-0.5 text-[10px] text-[#D4AF37] font-semibold">
-                                      <Check className="h-3 w-3" />
-                                      Selected
-                                    </span>
-                                  )}
-                                </div>
-
-                                <p className="text-xs text-[#E3D5C8] leading-relaxed mb-2">
-                                  {ep.summary}
-                                </p>
-
-                                <p className="text-[11px] text-[#B09E8F] leading-relaxed mb-2 italic">
-                                  {ep.historicalContext}
-                                </p>
-
-                                {ep.primaryQuote && (
-                                  <div className="p-2 rounded bg-[#150D08]/80 border-l-2 border-[#D4AF37] text-[10.5px] text-[#D8C7B8] mb-2">
-                                    <div className="flex items-center gap-1 text-[#D4AF37] font-semibold text-[10px] mb-0.5">
-                                      <Quote className="h-2.5 w-2.5" />
-                                      <span>{ep.primaryQuote.speaker}</span>
-                                    </div>
-                                    <p className="italic">"{ep.primaryQuote.text}"</p>
-                                    <span className="text-[9px] text-[#8C7A6B] block mt-0.5">— {ep.primaryQuote.source}</span>
-                                  </div>
-                                )}
-
-                                <div className="flex items-center justify-between text-[10px] text-[#8C7A6B] pt-1.5 border-t border-[#523825]/40">
-                                  <span className="truncate max-w-[70%]">
-                                    <strong>Archival Source:</strong> {ep.historicalEvidence}
-                                  </span>
-                                  <span className="text-[#D4AF37]">
-                                    {ep.historicalPeopleInvolved.length} Witnesses
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )
-                    ) : (
-                      /* Fallback: Show suggested historical events for this figure */
-                      <div className="space-y-2.5">
-                        <p className="text-[11px] text-[#A69280] italic">
-                          Showing contemporaneous historical milestones involving {figure.name} and {activeRecipient.name}:
-                        </p>
-                        {figure.suggestedEvents.map((evt) => {
-                          const isSelected = selectedEvent?.id === evt.id;
-                          return (
-                            <div
-                              key={evt.id}
-                              onClick={() => {
-                                onSelectEvent(evt);
-                                playSoundEffect('scratch');
-                              }}
-                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                isSelected
-                                  ? 'border-[#D4AF37] bg-[#2C1A0F] shadow-lg text-[#FFF]'
-                                  : 'border-[#664630]/40 bg-[#1A110B]/60 hover:border-[#8C6D46] hover:bg-[#23150C] text-[#D4C4B5]'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="px-1.5 py-0.5 rounded bg-[#D4AF37]/20 border border-[#D4AF37]/40 font-mono text-[10px] font-bold text-[#D4AF37]">
-                                  {evt.year}
-                                </span>
-                                <h5 className="font-cinzel text-xs font-bold text-[#F3EFE6] flex-1">
-                                  {evt.title}
-                                </h5>
-                                {isSelected && (
-                                  <span className="flex items-center gap-0.5 text-[10px] text-[#D4AF37] font-semibold">
-                                    <Check className="h-3 w-3" />
-                                    Selected
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-[#E3D5C8] leading-relaxed mb-1">
-                                {evt.context}
-                              </p>
-                              <span className="text-[10px] text-[#8C7A6B]">
-                                Source: {evt.historicalEvidence}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ------------------------------------------------------------- */}
-                {/* TAB 3: HISTORICAL PEOPLE & INTERMEDIARIES */}
-                {/* ------------------------------------------------------------- */}
-                {activeDossierTab === 'people' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-cinzel font-bold text-[#E8D9C8] tracking-wider uppercase block">
-                        {dossierVisualMode ? 'Contemporaries & Intermediaries' : 'Shared Social Circle'}
-                      </span>
-                      <span className="text-[10px] text-[#A69280] italic">
-                        {dossierVisualMode ? 'Historical witnesses' : 'Witnesses & intermediaries'}
-                      </span>
-                    </div>
-
-                    {sharedPeople.length > 0 ? (
-                      dossierVisualMode ? (
-                        /* Visual Cameo Grid */
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                            {sharedPeople.map((person, idx) => {
-                              const role = person.includes('Planck') ? 'Quantum Physicist'
-                                : person.includes('Lorentz') ? 'Solvay Chair'
-                                : person.includes('Rutherford') ? 'Nuclear Pioneer'
-                                : person.includes('Poincaré') ? 'Mathematician'
-                                : person.includes('Langevin') ? 'Physicist & Compeer'
-                                : person.includes('Gandhi') ? 'Satyagraha Leader'
-                                : person.includes('Rolland') ? 'Pacifist Author'
-                                : person.includes('Menuhin') ? 'Violin Virtuoso'
-                                : person.includes('Andrews') ? 'Emissary & Educator'
-                                : person.includes('Irène') ? 'Sorbonne Colleague'
-                                : 'Archival Witness';
-
-                              return (
-                                <WitnessCameo
-                                  key={idx}
-                                  name={person}
-                                  role={role}
-                                />
-                              );
-                            })}
-                          </div>
-
-                          {/* Visual Topic Badges */}
-                          <div className="pt-2 border-t border-[#523825]/40">
-                            <span className="text-[10px] font-cinzel font-bold text-[#D4AF37] uppercase tracking-wider block mb-2">
-                              Historical Evidence Badges
-                            </span>
-                            <div className="flex flex-wrap gap-1.5">
-                              {figure.researchKeywords.map((kw) => {
-                                const isToggled = selectedKeywords.some((k) => k.id === kw.id);
-                                const icon = kw.category === 'science' ? '⚛️' : kw.category === 'philosophy' ? '📜' : kw.category === 'personal' ? '💌' : '🌍';
-                                return (
-                                  <button
-                                    key={kw.id}
-                                    onClick={() => onToggleKeyword && onToggleKeyword(kw)}
-                                    className={`px-2 py-1 rounded-lg border text-[10px] font-sans flex items-center gap-1.5 transition ${
-                                      isToggled
-                                        ? 'border-[#D4AF37] bg-[#2E1B10] text-[#FFF] shadow'
-                                        : 'border-[#664630]/40 bg-[#160E08]/70 text-[#A69280] hover:border-[#8C6D46]'
-                                    }`}
-                                  >
-                                    <span>{icon}</span>
-                                    <span className="font-serif">{kw.label}</span>
-                                    {isToggled && <Check className="h-2.5 w-2.5 text-[#D4AF37]" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-[11px] text-[#DDD0C2]">
-                            The following real historical figures were present or directly referenced during their mutual encounters:
-                          </p>
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {sharedPeople.map((person, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#8C6D46]/40 bg-[#251810]/70 text-xs font-serif text-[#F2DFCE] shadow-sm hover:border-[#D4AF37] transition"
-                              >
-                                <Users className="h-3 w-3 text-[#D4AF37]" />
-                                <span>{person}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    ) : (
-                      <p className="text-[11px] text-[#A69280] italic">
-                        Direct bilateral correspondence preserved in museum archives.
-                      </p>
-                    )}
-
-                    {!dossierVisualMode && (
-                      /* Research evidence keywords (archival text view) */
-                      <div className="pt-3 border-t border-[#523825]/40">
-                        <span className="text-xs font-cinzel font-bold text-[#E8D9C8] tracking-wider uppercase block mb-1">
-                          Historical Topics & Evidence Keywords
-                        </span>
-                        <p className="text-[10px] text-[#A69280] italic mb-2">
-                          Toggle evidenced historical facts to thread into the letter
-                        </p>
-
-                        <div className="space-y-1.5">
-                          {figure.researchKeywords.map((kw) => {
-                            const isToggled = selectedKeywords.some((k) => k.id === kw.id);
-                            return (
-                              <div
-                                key={kw.id}
-                                onClick={() => onToggleKeyword && onToggleKeyword(kw)}
-                                className={`p-2 rounded border cursor-pointer transition ${
-                                  isToggled
-                                    ? 'border-[#D4AF37] bg-[#2B1B10] text-[#FFF]'
-                                    : 'border-[#664630]/30 bg-[#160E08]/60 text-[#B8A695] hover:border-[#8C6D46]'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between text-xs font-medium mb-0.5">
-                                  <span className={isToggled ? 'text-[#D4AF37]' : 'text-[#E3D4C4]'}>
-                                    {kw.label}
-                                  </span>
-                                  <span className="text-[9px] uppercase px-1.5 py-0.2 bg-[#422B1B]/40 rounded text-[#A69280]">
-                                    {kw.category}
-                                  </span>
-                                </div>
-                                <p className="text-[10px] text-[#8C7A6B] line-clamp-1">
-                                  {kw.historicalFact}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ------------------------------------------------------------- */}
-                {/* TAB 4: TONE & MOOD QUICK CONTROLS */}
-                {/* ------------------------------------------------------------- */}
-                {activeDossierTab === 'tone' && (
-                  <div className="space-y-4">
-                    {/* Tone selection */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-cinzel font-bold text-[#E8D9C8] tracking-wider uppercase">
-                          {dossierVisualMode ? 'Epistolary Wax Seals' : `Epistolary Tone (${figure.era})`}
-                        </span>
-                        <span className="text-[10px] text-[#A69280] italic">
-                          {dossierVisualMode ? 'Select signature seal' : 'Tone register'}
-                        </span>
-                      </div>
-
-                      {dossierVisualMode ? (
-                        /* Visual Wax Seals Matrix */
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {figure.availableTones.map((tone) => {
-                            const isSelected = selectedTone?.id === tone.id;
-                            return (
-                              <VisualToneSeal
-                                key={tone.id}
-                                toneId={tone.id}
-                                label={tone.label}
-                                description={tone.description}
-                                isSelected={isSelected}
-                                onClick={() => onSelectTone && onSelectTone(tone)}
-                              />
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {figure.availableTones.map((tone) => {
-                            const isSelected = selectedTone?.id === tone.id;
-                            return (
-                              <div
-                                key={tone.id}
-                                onClick={() => onSelectTone && onSelectTone(tone)}
-                                className={`p-2.5 rounded-lg border cursor-pointer transition ${
-                                  isSelected
-                                    ? 'border-[#D4AF37] bg-[#2C1A0F] text-[#FFF]'
-                                    : 'border-[#664630]/40 bg-[#1A110B]/60 text-[#C7B5A4] hover:border-[#8C6D46]'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <strong className="text-xs text-[#F3EFE6]">{tone.label}</strong>
-                                  {isSelected && <Check className="h-3 w-3 text-[#D4AF37]" />}
-                                </div>
-                                <p className="text-[10px] text-[#A69280]">{tone.description}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Mood selection */}
-                    <div className="pt-3 border-t border-[#523825]/40">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-cinzel font-bold text-[#E8D9C8] tracking-wider uppercase">
-                          {dossierVisualMode ? 'Inner Emotional Spheres' : "Writer's Inner Mood"}
-                        </span>
-                        <span className="text-[10px] text-[#A69280] italic">
-                          {dossierVisualMode ? 'Chromatic affect' : 'Emotional disposition'}
-                        </span>
-                      </div>
-
-                      {dossierVisualMode ? (
-                        /* Visual Chromatic Mood Spheres */
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {figure.availableMoods.map((mood) => {
-                            const isSelected = selectedMood?.id === mood.id;
-                            return (
-                              <VisualMoodSphere
-                                key={mood.id}
-                                moodId={mood.id}
-                                label={mood.label}
-                                emotionalState={mood.emotionalState}
-                                isSelected={isSelected}
-                                onClick={() => onSelectMood && onSelectMood(mood)}
-                              />
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {figure.availableMoods.map((mood) => {
-                            const isSelected = selectedMood?.id === mood.id;
-                            return (
-                              <div
-                                key={mood.id}
-                                onClick={() => onSelectMood && onSelectMood(mood)}
-                                className={`p-2.5 rounded-lg border cursor-pointer transition ${
-                                  isSelected
-                                    ? 'border-[#D4AF37] bg-[#2C1A0F] text-[#FFF]'
-                                    : 'border-[#664630]/40 bg-[#1A110B]/60 text-[#C7B5A4] hover:border-[#8C6D46]'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <strong className="text-xs text-[#F3EFE6]">{mood.label}</strong>
-                                  {isSelected && <Check className="h-3 w-3 text-[#D4AF37]" />}
-                                </div>
-                                <p className="text-[10px] text-[#A69280]">{mood.emotionalState}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              </div>
-
-              {/* Dossier Bottom Action Bar */}
-              <div className="p-3 border-t border-[#8C6D46]/30 bg-[#1D120B]/90 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-                <div className="text-[11px] font-serif text-[#C5B3A1]">
-                  <span>To: <strong className="text-[#F2DFCE]">{activeRecipient.name}</strong></span>
-                  <span className="text-[#6B4B35] mx-1.5">•</span>
-                  <span>Event: <strong className="text-[#F2DFCE]">{selectedEvent?.year || '1911'}</strong></span>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    id="btn-pen-historical-letter"
-                    onClick={handleGenerateClick}
-                    disabled={isGenerating}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border border-[#D4AF37] bg-gradient-to-r from-[#8C5D33] to-[#B37943] px-4 py-2 text-xs font-serif font-bold text-[#FFF] shadow-lg hover:from-[#A66E3C] hover:to-[#C98A4E] transition disabled:opacity-50"
-                  >
-                    <Feather className="h-3.5 w-3.5 text-[#FFE699]" />
-                    <span>{isGenerating ? 'Inking Parchment...' : 'Pen Historical Letter'}</span>
-                  </button>
-
-                  <button
-                    onClick={onProceedToStudio}
-                    className="px-2.5 py-2 rounded-lg border border-[#8C6D46]/40 bg-[#25170E] text-xs font-serif text-[#D4C4B5] hover:text-[#FFF] hover:border-[#D4AF37] transition"
-                    title="Open in dual-perspective studio"
-                  >
-                    <Maximize2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
+            {/* Right: Primary Inking Action */}
+            <div className="flex items-center gap-2">
+              <button
+                id="btn-pen-historical-letter"
+                onClick={handleGenerateClick}
+                disabled={!hasReceiver || isGenerating}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-serif font-semibold transition shadow-md ${
+                  !hasReceiver
+                    ? 'border border-[#8C6D46]/40 bg-[#251810] text-[#7A6250] cursor-not-allowed'
+                    : 'border border-[#D4AF37] bg-gradient-to-r from-[#3D2517] via-[#52331F] to-[#3D2517] text-[#F7EFE4] hover:border-[#F3EFE6] hover:shadow-[0_0_15px_rgba(212,175,55,0.4)]'
+                }`}
+              >
+                <Sparkles className="h-4 w-4 text-[#D4AF37]" />
+                <span>
+                  {isGenerating ? 'Inking Parchment...' : 'Pen Historical Letter'}
+                </span>
+              </button>
             </div>
 
           </div>
-        )}
 
-      </div>
+        </div>
+      )}
 
-      {/* 5. BOTTOM PERIOD MATERIALITY BAR */}
-      <footer className={`relative z-30 transition-all duration-300 pb-4 px-6 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#3A2417]/40 bg-[#160D08]/60 backdrop-blur-sm ${
+      </main>
+
+      {/* 5. BOTTOM PERIOD MATERIALITY FOOTER */}
+      <footer className={`relative z-30 transition-all duration-300 py-3 px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-[#3A2417]/40 bg-[#140C07]/70 backdrop-blur-sm ${
         zenMode ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'
       }`}>
-        <div className="flex items-center gap-2 text-xs text-[#A89481] font-serif">
+        <div className="flex items-center gap-2 text-[11px] text-[#A89481] font-serif">
           <Feather className="h-3.5 w-3.5 text-[#D4AF37]" />
           <span>{deskInfo.instrumentDescription}</span>
           <span className="text-[#594231]">•</span>
           <span>{deskInfo.inkDescription}</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {letter && (
-            <button
-              onClick={() => setIsBreakdownModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46]/40 bg-[#1F130B]/80 px-3 py-1.5 text-xs font-serif text-[#E0C9A6] hover:bg-[#2C1B10] hover:text-[#FFF] transition"
-            >
-              <Info className="h-3.5 w-3.5 text-[#D4AF37]" />
-              <span>Modern Breakdown & Citations</span>
-            </button>
-          )}
-
-          <button
-            onClick={handleGenerateClick}
-            className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46]/60 bg-[#2C1C12]/90 px-3.5 py-1.5 text-xs font-serif font-medium text-[#E5D7C7] hover:bg-[#3D2719] hover:border-[#D4AF37] hover:text-[#FFF] transition shadow"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />
-            <span>Generate Historical Letter</span>
-          </button>
+        <div className="text-[11px] text-[#7A6858] font-serif">
+          Epistolary Triad: Marie Curie (1911) · Albert Einstein (1922) · Rabindranath Tagore (1930)
         </div>
       </footer>
 
-      {/* 6. MODERN BREAKDOWN & CITATIONS MODAL */}
+      {/* 6. MODERN BREAKDOWN & TEMPORAL SPEED MODAL */}
       {isBreakdownModalOpen && letter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-2xl rounded-xl border border-[#8C6D46]/50 bg-[#180E09] p-6 text-[#E3D4C4] shadow-2xl overflow-y-auto max-h-[85vh]">
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#8C6D46]/30">
               <div className="flex items-center gap-2">

@@ -202,8 +202,8 @@ export default function App() {
       }
     }
 
-    // If letter was already penned, regenerate with new recipient & event
-    if (letter && currentFigure && matchedEvent && selectedTone && selectedMood) {
+    // Automatically generate authentic letter on parchment for this pair
+    if (currentFigure && matchedEvent && selectedTone && selectedMood) {
       generateLetter(
         currentFigure,
         recipient,
@@ -325,6 +325,7 @@ export default function App() {
             onBackToPens={() => setActiveView('home-pens')}
             onOpenTriadMap={() => setActiveView('relationship-map')}
             onOpenNetwork={() => setActiveView('network-select')}
+            onOpenSystemDiagram={() => setIsSystemModalOpen(true)}
             onProceedToStudio={() => {
               if (selectedRecipient && selectedEvent && selectedTone && selectedMood && !letter) {
                 generateLetter(
