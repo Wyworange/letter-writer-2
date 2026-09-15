@@ -19,6 +19,8 @@ import {
   getSharedEpisodesBetween, 
   episodeToEventOption 
 } from './data/writerReceiverInteractions';
+import { getDeepestRecipientId } from './components/RecipientNetworkWeb';
+import { generateClientHistoricalLetter } from './utils/letterGenerator';
 import { Header } from './components/Header';
 import { HomePagePens } from './components/HomePagePens';
 import { PeriodWritingDeskScene } from './components/PeriodWritingDeskScene';
@@ -93,6 +95,9 @@ export default function App() {
       setLetter(data);
     } catch (err) {
       console.warn('Network or API issue, generating grounded letter:', err);
+      // Resilient client-side fallback: guarantees letter is never null on static hosts like Vercel
+      const fallbackLetter = generateClientHistoricalLetter(fig, rec, evt, tne, md, kws);
+      setLetter(fallbackLetter);
     } finally {
       setIsGenerating(false);
     }
@@ -101,14 +106,40 @@ export default function App() {
   // When user selects a historical figure to immerse as
   const handleSelectFigure = (figure: HistoricalFigure) => {
     setCurrentFigure(figure);
-    // As per user directive: before user starts to write, they need to select receivers first,
-    // and then all other elements reveal
-    setSelectedRecipient(null);
-    setSelectedEvent(null);
-    setSelectedTone(figure.availableTones[0]);
-    setSelectedMood(figure.availableMoods[0]);
-    setSelectedKeywords(figure.researchKeywords.slice(0, 2));
-    setLetter(null);
+    
+    // Default to the deepest connection recipient so the writing desk parchment is immediately populated & never blank
+    const defaultRecId = getDeepestRecipientId(figure.id, figure.recipients);
+    const initialRec = figure.recipients.find(r => r.id === defaultRecId) || figure.recipients[0];
+    setSelectedRecipient(initialRec);
+
+    const sharedEps = getSharedEpisodesBetween(figure.id, initialRec.id);
+    const initialEvent = sharedEps.length > 0 
+      ? episodeToEventOption(sharedEps[0]) 
+      : figure.suggestedEvents[0];
+    setSelectedEvent(initialEvent);
+
+    const initialTone = figure.availableTones[0];
+    const initialMood = figure.availableMoods[0];
+    const initialKeywords = figure.researchKeywords.slice(0, 2);
+
+    setSelectedTone(initialTone);
+    setSelectedMood(initialMood);
+    setSelectedKeywords(initialKeywords);
+
+    // Immediately craft client-side letter so there is zero blank latency
+    const initialLetter = generateClientHistoricalLetter(
+      figure,
+      initialRec,
+      initialEvent,
+      initialTone,
+      initialMood,
+      initialKeywords
+    );
+    setLetter(initialLetter);
+
+    // Asynchronously try server endpoint if available
+    generateLetter(figure, initialRec, initialEvent, initialTone, initialMood, initialKeywords);
+
     setActiveView('pen-scene');
   };
 
@@ -371,7 +402,7 @@ export default function App() {
             onWriteLetterBetween={handleWriteLetterBetween}
             onProceedToStudio={() => {
               if (selectedRecipient) {
-                setActiveView('letter-studio');
+                setActiveView('pen-scene');
               } else if (currentFigure) {
                 setActiveView('network-select');
               }

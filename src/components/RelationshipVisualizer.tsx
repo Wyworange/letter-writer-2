@@ -749,7 +749,7 @@ export const RelationshipVisualizer: React.FC<RelationshipVisualizerProps> = ({
                   "{centerNexus.historicalImpact}"
                 </div>
               </div>
-            ) : selectedFigureId && selectedFigureId !== 'nexus' ? (
+            ) : selectedFigureId ? (
               /* Figure Bio Focus */
               (() => {
                 const fig = figures.find(f => f.id === selectedFigureId) || einstein;

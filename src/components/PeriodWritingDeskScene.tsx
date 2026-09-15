@@ -14,6 +14,7 @@ import {
   episodeToEventOption,
   HistoricalSharedEpisode 
 } from '../data/writerReceiverInteractions';
+import { generateClientHistoricalLetter } from '../utils/letterGenerator';
 import { 
   Feather, 
   ArrowLeft, 
@@ -42,6 +43,8 @@ import {
   WitnessCameo 
 } from './HistoricalVisualScenes';
 import { RecipientNetworkWeb, getPortraitForPerson } from './RecipientNetworkWeb';
+import { SymbolicElementSelector } from './SymbolicElementSelector';
+import { InteractivePenAnimation } from './InteractivePenAnimation';
 
 // ============================================================================
 // HISTORICAL EVENT CATEGORIZATION DEFINITIONS
@@ -218,10 +221,14 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
   // Zen mode: hides HUD controls for pure contemplation of the desk
   const [zenMode, setZenMode] = useState(false);
 
-  // Parchment mode: starts 'blank' ("without the texts on the page")
+  // Parchment mode: starts in 'blank' if not yet written, or 'interactive' / 'archival'
   const [writingMode, setWritingMode] = useState<'blank' | 'interactive' | 'archival'>('blank');
   const [userText, setUserText] = useState('');
   const [copiedNotification, setCopiedNotification] = useState(false);
+
+  // Dynamic inking animation state
+  const [isWritingAnimationActive, setIsWritingAnimationActive] = useState<boolean>(false);
+  const [hasInkedCurrentLetter, setHasInkedCurrentLetter] = useState<boolean>(false);
 
   // Recipient selection state
   const hasReceiver = Boolean(selectedRecipient);
@@ -238,22 +245,14 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
   // Modern breakdown modal state
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
 
-  // Whenever selectedRecipient changes, auto-expand or collapse recipient picker and activate archival mode
+  // Whenever selectedRecipient changes, auto-expand or collapse recipient picker
   useEffect(() => {
     if (!selectedRecipient) {
       setShowRecipientPicker(true);
     } else {
       setShowRecipientPicker(false);
-      setWritingMode('archival');
     }
   }, [selectedRecipient]);
-
-  // When letter arrives, switch to archival mode
-  useEffect(() => {
-    if (letter) {
-      setWritingMode('archival');
-    }
-  }, [letter]);
 
   // Desk background and period stationery info
   const deskImageMap: Record<string, {
@@ -331,36 +330,17 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
     : allEventsList.filter(e => e.category === selectedCategory);
 
   // Authentic period dispatch on the parchment (either AI-generated or verified archival grounded draft)
-  const effectiveLetter = letter || (activeRecipient ? {
-    id: `grounded-${figure.id}-${activeRecipient.id}`,
-    senderId: figure.id,
-    recipientId: activeRecipient.id,
-    salutation: activeRecipient.id === 'curie' 
-      ? 'Chère Madame Curie,' 
-      : activeRecipient.id === 'einstein'
-      ? 'Lieber Herr Einstein,'
-      : activeRecipient.id === 'tagore'
-      ? 'Revered Gurudev Rabindranath,'
-      : `To my esteemed ${activeRecipient.title || ''} ${activeRecipient.name},`,
-    dateAndLocation: `${figure.city}, ${selectedEvent?.year || figure.era}`,
-    bodyParagraphs: [
-      `I write to you amidst the quiet reflections of our epoch. The matter of ${selectedEvent?.title || 'our recent correspondence'} continues to stir my deepest contemplation.`,
-      selectedEvent?.context 
-        ? `As history marks this juncture: ${selectedEvent.context}. In our shared pursuit of truth and understanding, these questions transcend our individual laboratories and studies.`
-        : `Across the geographical distance between ${figure.city} and ${activeRecipient.location}, the invisible bridge of intellectual kinship remains unshakeable.`,
-      `I remain hopeful that our paths shall soon converge once more. May this dispatch convey my unwavering respect and warm thoughts to you.`
-    ],
-    valediction: figure.id === 'curie' 
-      ? 'With sincere devotion and scientific respect,' 
-      : figure.id === 'einstein' 
-      ? 'With warmest regards and friendly esteem,' 
-      : 'In eternal harmony and affection,',
-    postScriptum: selectedEvent?.historicalEvidence ? `P.S. Regarding our discourse: "${selectedEvent.historicalEvidence}"` : undefined,
-    generationSource: 'archive-engine' as const
-  } : null);
+  const effectiveLetter = letter || (activeRecipient ? generateClientHistoricalLetter(
+    figure,
+    activeRecipient,
+    selectedEvent,
+    null,
+    null,
+    []
+  ) : null);
 
-  // Sound synthesis for authentic ambient pen scratching
-  const playSoundEffect = (type: 'scratch' | 'crackle' | 'dip') => {
+  // Sound synthesis for authentic ambient pen scratching, ink dipping, and wax stamping
+  const playSoundEffect = (type: 'scratch' | 'crackle' | 'dip' | 'stamp') => {
     if (!soundEnabled) return;
     try {
       if (!audioCtxRef.current) {
@@ -394,6 +374,30 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
         filter.connect(gain);
         gain.connect(ctx.destination);
         noise.start();
+      } else if (type === 'dip') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } else if (type === 'stamp') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(110, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.22);
       }
     } catch {
       // Audio fallback
@@ -405,12 +409,23 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
     playSoundEffect('scratch');
   };
 
-  const handleGenerateClick = () => {
-    playSoundEffect('scratch');
+  const handleStartWritingProcess = () => {
+    playSoundEffect('dip');
     if (onGenerateLetter) {
       onGenerateLetter();
     }
+    setIsWritingAnimationActive(true);
+    setHasInkedCurrentLetter(false);
+  };
+
+  const handleWritingCompleted = () => {
+    setHasInkedCurrentLetter(true);
+    setIsWritingAnimationActive(false);
     setWritingMode('archival');
+  };
+
+  const handleGenerateClick = () => {
+    handleStartWritingProcess();
   };
 
   const handleSelectRecipientCard = (rec: Recipient) => {
@@ -869,147 +884,182 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
           )}
 
           {/* =================================================================== */}
+          {/* SYMBOLIC ELEMENT SELECTOR (Tone, Mood, and Multi-Select Motifs)     */}
+          {/* =================================================================== */}
+          {onSelectTone && onSelectMood && onToggleKeyword && (
+            <SymbolicElementSelector
+              figure={figure}
+              selectedTone={selectedTone || null}
+              selectedMood={selectedMood || null}
+              selectedKeywords={selectedKeywords}
+              selectedEvent={selectedEvent || null}
+              onSelectTone={onSelectTone}
+              onSelectMood={onSelectMood}
+              onToggleKeyword={onToggleKeyword}
+              onStartWriting={handleStartWritingProcess}
+              isWritingInProgress={isWritingAnimationActive || isGenerating}
+              hasReceiver={hasReceiver}
+            />
+          )}
+
+          {/* =================================================================== */}
           {/* FLOATING LAYER 3: PARCHMENT MANUSCRIPT (信纸正文落款与书写区)         */}
           {/* =================================================================== */}
           <div className="flex-1 flex flex-col pt-1 sm:pt-2">
             
-            {/* 1. STATE: BLANK PARCHMENT */}
-            {writingMode === 'blank' && (
-                  <div 
-                    className="flex-1 flex flex-col items-center justify-center text-center p-6 cursor-pointer group my-4 rounded-xl border border-[#8C6D46]/15 hover:border-[#8C6D46]/40 transition"
-                    onClick={() => {
-                      setWritingMode('interactive');
-                      playSoundEffect('scratch');
-                    }}
-                    title="Click anywhere to take up the pen and write"
-                  >
-                    <div className="flex flex-col items-center gap-2 p-4 rounded-xl max-w-md">
-                      <Feather className="h-8 w-8 text-[#8C6D46] group-hover:text-[#D4AF37] group-hover:scale-110 transition duration-300" />
-                      <h4 className="font-cinzel text-sm font-bold text-[#3D2211]">
-                        Parchment Ready on {figure.name}'s Desk
-                      </h4>
-                      <p className="font-serif text-xs text-[#5A3822] leading-relaxed">
-                        Addressed to <strong className="text-[#2C180B]">{activeRecipient?.name}</strong>.
-                        <br />
-                        Click to pen freeform thoughts, or click <strong className="text-[#2C180B]">"Pen Historical Letter"</strong> below to channel their authentic 1911-1930 cadence.
-                      </p>
-                    </div>
-                  </div>
-                )}
+            {/* 1. STATE: INTERACTIVE FREELANCE WRITING */}
+            {writingMode === 'interactive' && (
+              <div className="flex-1 flex flex-col">
+                <div className="mb-2 flex items-center justify-between text-xs font-serif text-[#5A3822] border-b border-[#664630]/15 pb-1">
+                  <span className="italic">{deskInfo.locationNote}</span>
+                  <span>From {figure.name} to {activeRecipient?.name}</span>
+                </div>
 
-                {/* 2. STATE: INTERACTIVE FREELANCE WRITING */}
-                {writingMode === 'interactive' && (
-                  <div className="flex-1 flex flex-col">
-                    <div className="mb-2 flex items-center justify-between text-xs font-serif text-[#5A3822] border-b border-[#664630]/15 pb-1">
-                      <span className="italic">{deskInfo.locationNote}</span>
-                      <span>From {figure.name} to {activeRecipient?.name}</span>
-                    </div>
+                <textarea
+                  id="parchment-user-textarea"
+                  value={userText}
+                  onChange={handleUserTextChange}
+                  placeholder={`Write your letter here in the hand of ${figure.name}, addressing ${activeRecipient?.name}...`}
+                  className="w-full flex-1 bg-transparent resize-none outline-none font-serif text-sm sm:text-base leading-relaxed text-[#2C180B] placeholder-[#664630]/60 select-text min-h-[220px]"
+                  autoFocus
+                  style={{
+                    lineHeight: '1.9',
+                    fontFamily: "'Playfair Display', Georgia, serif"
+                  }}
+                />
 
-                    <textarea
-                      id="parchment-user-textarea"
-                      value={userText}
-                      onChange={handleUserTextChange}
-                      placeholder={`Write your letter here in the hand of ${figure.name}, addressing ${activeRecipient?.name}...`}
-                      className="w-full flex-1 bg-transparent resize-none outline-none font-serif text-sm sm:text-base leading-relaxed text-[#2C180B] placeholder-[#664630]/60 select-text min-h-[220px]"
-                      autoFocus
-                      style={{
-                        lineHeight: '1.9',
-                        fontFamily: "'Playfair Display', Georgia, serif"
+                <div className="mt-3 pt-2 border-t border-[#664630]/20 flex items-center justify-between text-[11px] font-serif text-[#5A3822]">
+                  <span>{userText.trim().split(/\s+/).filter(Boolean).length} words penned</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setWritingMode('archival')}
+                      className="hover:text-[#2C180B] text-xs font-serif underline transition"
+                    >
+                      View Historical Inscription
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (userText) {
+                          navigator.clipboard.writeText(userText);
+                          setCopiedNotification(true);
+                          setTimeout(() => setCopiedNotification(false), 2000);
+                        }
                       }}
-                    />
-
-                    <div className="mt-3 pt-2 border-t border-[#664630]/20 flex items-center justify-between text-[11px] font-serif text-[#5A3822]">
-                      <span>{userText.trim().split(/\s+/).filter(Boolean).length} words penned</span>
-                      <button
-                        onClick={() => {
-                          if (userText) {
-                            navigator.clipboard.writeText(userText);
-                            setCopiedNotification(true);
-                            setTimeout(() => setCopiedNotification(false), 2000);
-                          }
-                        }}
-                        className="hover:text-[#2C180B] underline transition"
-                      >
-                        {copiedNotification ? 'Copied to Clipboard' : 'Copy Draft Text'}
-                      </button>
-                    </div>
+                      className="hover:text-[#2C180B] underline transition"
+                    >
+                      {copiedNotification ? 'Copied to Clipboard' : 'Copy Draft Text'}
+                    </button>
                   </div>
-                )}
+                </div>
+              </div>
+            )}
 
-                {/* 3. STATE: ARCHIVAL LETTER DISPATCH */}
-                {writingMode === 'archival' && (
-                  <div className="flex-1 flex flex-col justify-between font-serif text-[#2C180B] select-text">
-                    {isGenerating ? (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
-                        <Feather className="h-8 w-8 text-[#8C6D46] animate-bounce" />
-                        <p className="font-cinzel text-sm font-semibold text-[#4A2D1A] tracking-wider">
-                          Transcribing Historical Dispatch...
-                        </p>
-                        <p className="text-xs text-[#6A472E] italic max-w-sm">
-                          Channeling {figure.name}'s epistolary cadence to {activeRecipient?.name} regarding {selectedEvent?.title || 'their shared history'}...
-                        </p>
-                      </div>
-                    ) : effectiveLetter ? (
-                      <div className="space-y-3">
-                        {/* Salutation & Date */}
-                        <div className="flex justify-between items-baseline text-xs text-[#5A3822] border-b border-[#664630]/15 pb-1 mb-2">
-                          <span className="italic">{effectiveLetter.dateAndLocation}</span>
-                          <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-[#4A2D1A]/10 text-[#5A3822]">
-                            {effectiveLetter.generationSource === 'gemini-agent' ? 'Archival Synthesis (AI)' : 'Primary Record Draft'}
-                          </span>
-                        </div>
+            {/* 2. STATE: INTERACTIVE PEN & WRITING PROCESS (Active or Uninked) */}
+            {writingMode !== 'interactive' && (!hasInkedCurrentLetter || isWritingAnimationActive) && (
+              <div className="flex-1 flex flex-col">
+                <div className="flex justify-between items-baseline text-xs text-[#5A3822] border-b border-[#664630]/15 pb-1 mb-2">
+                  <span className="italic">{deskInfo.locationNote}</span>
+                  <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-[#4A2D1A]/10 text-[#5A3822]">
+                    Addressed to {activeRecipient?.name || 'Correspondent'}
+                  </span>
+                </div>
 
-                        <h4 className="font-serif text-base sm:text-lg font-bold text-[#2C180B]">
-                          {effectiveLetter.salutation}
-                        </h4>
+                <InteractivePenAnimation
+                  figure={figure}
+                  letter={effectiveLetter}
+                  isWriting={isWritingAnimationActive}
+                  onWritingComplete={handleWritingCompleted}
+                  onStartWriting={handleStartWritingProcess}
+                  soundEnabled={soundEnabled}
+                  onPlaySound={playSoundEffect}
+                />
+              </div>
+            )}
 
-                        {/* Body Paragraphs */}
-                        <div className="space-y-3 text-xs sm:text-sm leading-relaxed text-[#2C180B]">
-                          {effectiveLetter.bodyParagraphs.map((para, idx) => (
-                            <p key={idx} style={{ textIndent: '1.25rem' }}>{para}</p>
-                          ))}
-                        </div>
-
-                        {/* Valediction & Signature */}
-                        <div className="mt-4 flex items-end justify-between pt-2">
-                          <div className="w-12 h-12 rounded-full border-2 border-[#8C2318] bg-[#A1281A] flex items-center justify-center text-[#F5EDE1] shadow-md transform rotate-6 select-none opacity-85">
-                            <span className="font-cinzel text-[10px] font-bold tracking-tighter">SEAL</span>
-                          </div>
-
-                          <div className="text-right">
-                            <p className="font-serif italic text-xs sm:text-sm font-semibold text-[#2C180B]">
-                              {effectiveLetter.valediction}
-                            </p>
-                            <p className="font-cinzel text-xs font-bold tracking-wider text-[#3D2211] mt-0.5">
-                              {figure.name}
-                            </p>
-                          </div>
-                        </div>
-
-                        {effectiveLetter.postScriptum && (
-                          <p className="mt-3 text-[11px] text-[#5A3822] italic border-t border-[#664630]/20 pt-2">
-                            {effectiveLetter.postScriptum}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-                        <BookOpen className="h-6 w-6 text-[#8C6D46] mb-2" />
-                        <p className="text-xs text-[#5A3822] mb-3">
-                          No archival letter inked yet. Select an event category above and tap "Pen Historical Letter".
-                        </p>
+            {/* 3. STATE: ARCHIVAL LETTER DISPATCH (Completed Inscription) */}
+            {writingMode !== 'interactive' && hasInkedCurrentLetter && !isWritingAnimationActive && (
+              <div className="flex-1 flex flex-col justify-between font-serif text-[#2C180B] select-text">
+                {isGenerating ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
+                    <Feather className="h-8 w-8 text-[#8C6D46] animate-bounce" />
+                    <p className="font-cinzel text-sm font-semibold text-[#4A2D1A] tracking-wider">
+                      Transcribing Historical Dispatch...
+                    </p>
+                    <p className="text-xs text-[#6A472E] italic max-w-sm">
+                      Channeling {figure.name}'s epistolary cadence to {activeRecipient?.name} regarding {selectedEvent?.title || 'their shared history'}...
+                    </p>
+                  </div>
+                ) : effectiveLetter ? (
+                  <div className="space-y-3">
+                    {/* Header Bar with Re-inscribe trigger */}
+                    <div className="flex justify-between items-baseline text-xs text-[#5A3822] border-b border-[#664630]/15 pb-1 mb-2">
+                      <span className="italic">{effectiveLetter.dateAndLocation}</span>
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={handleGenerateClick}
-                          className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46] bg-[#3D2617] px-3.5 py-1.5 text-xs text-[#F2DFCE] hover:bg-[#52331F] transition shadow"
+                          onClick={handleStartWritingProcess}
+                          className="flex items-center gap-1 text-[10px] font-sans font-semibold px-2 py-0.5 rounded bg-[#EFE3CF] hover:bg-[#E2D2BC] text-[#5C3817] border border-[#C5A882]/40 transition"
+                          title="Watch the pen re-inscribe this letter"
                         >
-                          <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />
-                          <span>Pen Letter Now</span>
+                          <span>✒️</span>
+                          <span>Re-Inscribe Pen</span>
                         </button>
+                        <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-[#4A2D1A]/10 text-[#5A3822]">
+                          {effectiveLetter.generationSource === 'gemini-agent' ? 'Archival Synthesis (AI)' : 'Primary Record Draft'}
+                        </span>
                       </div>
+                    </div>
+
+                    <h4 className="font-serif text-base sm:text-lg font-bold text-[#2C180B]">
+                      {effectiveLetter.salutation}
+                    </h4>
+
+                    {/* Body Paragraphs */}
+                    <div className="space-y-3 text-xs sm:text-sm leading-relaxed text-[#2C180B]">
+                      {effectiveLetter.bodyParagraphs.map((para, idx) => (
+                        <p key={idx} style={{ textIndent: '1.25rem' }}>{para}</p>
+                      ))}
+                    </div>
+
+                    {/* Valediction & Signature */}
+                    <div className="mt-4 flex items-end justify-between pt-2">
+                      <div className="w-12 h-12 rounded-full border-2 border-[#8C2318] bg-[#A1281A] flex items-center justify-center text-[#F5EDE1] shadow-md transform rotate-6 select-none opacity-90">
+                        <span className="font-cinzel text-[10px] font-bold tracking-tighter">SEALED</span>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-serif italic text-xs sm:text-sm font-semibold text-[#2C180B]">
+                          {effectiveLetter.valediction}
+                        </p>
+                        <p className="font-cinzel text-xs font-bold tracking-wider text-[#3D2211] mt-0.5">
+                          {figure.name}
+                        </p>
+                      </div>
+                    </div>
+
+                    {effectiveLetter.postScriptum && (
+                      <p className="mt-3 text-[11px] text-[#5A3822] italic border-t border-[#664630]/20 pt-2">
+                        {effectiveLetter.postScriptum}
+                      </p>
                     )}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+                    <BookOpen className="h-6 w-6 text-[#8C6D46] mb-2" />
+                    <p className="text-xs text-[#5A3822] mb-3">
+                      Parchment ready on desk. Select your motifs above and tap "Inscribe Letter".
+                    </p>
+                    <button
+                      onClick={handleStartWritingProcess}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#8C6D46] bg-[#3D2617] px-3.5 py-1.5 text-xs text-[#F2DFCE] hover:bg-[#52331F] transition shadow"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />
+                      <span>Inscribe Letter Now</span>
+                    </button>
                   </div>
                 )}
               </div>
+            )}
+          </div>
 
           {/* =================================================================== */}
           {/* FLOATING BOTTOM ACTION DOCK (落笔与工具栏，漂浮在信纸底部)           */}
@@ -1065,8 +1115,8 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
             <div className="flex items-center gap-2">
               <button
                 id="btn-pen-historical-letter"
-                onClick={handleGenerateClick}
-                disabled={!hasReceiver || isGenerating}
+                onClick={handleStartWritingProcess}
+                disabled={!hasReceiver || isGenerating || isWritingAnimationActive}
                 className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-serif font-semibold transition shadow-md ${
                   !hasReceiver
                     ? 'border border-[#8C6D46]/40 bg-[#251810] text-[#7A6250] cursor-not-allowed'
@@ -1075,7 +1125,7 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
               >
                 <Sparkles className="h-4 w-4 text-[#D4AF37]" />
                 <span>
-                  {isGenerating ? 'Inking Parchment...' : 'Pen Historical Letter'}
+                  {isWritingAnimationActive ? 'Inking in Progress...' : isGenerating ? 'Transcribing...' : 'Inscribe Historical Letter'}
                 </span>
               </button>
             </div>

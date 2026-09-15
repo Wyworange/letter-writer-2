@@ -29,6 +29,49 @@ import {
   RefreshCw 
 } from 'lucide-react';
 
+const TONE_SYMBOLS: Record<string, string> = {
+  scientific_clarity: '🔬',
+  stoic_determination: '🛡️',
+  solicitous_concern: '🕯️',
+  collegial_affection: '🤝',
+  playful_philosophical: '💡',
+  reverent_humble: '🙏',
+  deeply_sorrowful: '🥀',
+  lyrical_philosophical: '🌿',
+  serene_contemplation: '🌊',
+  fiery_prophetic: '⚡',
+};
+
+const MOOD_SYMBOLS: Record<string, string> = {
+  exhausted_resolute: '⚖️',
+  grieving_isolated: '🥀',
+  quietly_victorious: '🌟',
+  wryly_detached: '🌀',
+  alarmed_principled: '🚨',
+  melancholy_hopeful: '🍂',
+  transcendent_calm: '🕊️',
+  anguished_indignant: '🔥',
+};
+
+const KEYWORD_SYMBOLS: Record<string, string> = {
+  radium_luminescence: '✨',
+  sorbonne_shed: '🏚️',
+  solvay_solidarity: '👥',
+  pitchblende_refining: '⛏️',
+  warsaw_roots: '🇵🇱',
+  little_curies: '🚑',
+  relativity_constancy: '🌌',
+  patent_office_reverie: '📜',
+  olympia_academy: '🏛️',
+  spinoza_pantheism: '🕊️',
+  pacifist_conscience: '☮️',
+  gitanjali_verses: '📖',
+  santiniketan_grove: '🌳',
+  swadeshi_heart: '🇮🇳',
+  surplus_human: '🎭',
+  universal_man: '🌍',
+};
+
 interface WritingDeskProps {
   figure: HistoricalFigure;
   recipient: Recipient;
@@ -212,6 +255,7 @@ export const WritingDesk: React.FC<WritingDeskProps> = ({
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {figure.availableTones.map((tone) => {
                   const isSelected = selectedTone.id === tone.id;
+                  const symbol = TONE_SYMBOLS[tone.id] || '✒️';
                   return (
                     <div
                       key={tone.id}
@@ -222,8 +266,9 @@ export const WritingDesk: React.FC<WritingDeskProps> = ({
                           : 'border-[#2D251D] bg-[#14110E] hover:border-[#B8860B]/50 hover:bg-[#1C1813]'
                       }`}
                     >
-                      <div className="font-semibold text-xs text-[#F3EFE6]">
-                        {tone.label}
+                      <div className="flex items-center gap-1.5 font-semibold text-xs text-[#F3EFE6]">
+                        <span>{symbol}</span>
+                        <span>{tone.label}</span>
                       </div>
                       <p className="mt-0.5 text-[10px] text-[#9E9281] line-clamp-2">
                         {tone.description}
@@ -243,17 +288,19 @@ export const WritingDesk: React.FC<WritingDeskProps> = ({
               <div className="flex flex-wrap gap-1.5">
                 {figure.availableMoods.map((mood) => {
                   const isSelected = selectedMood.id === mood.id;
+                  const symbol = MOOD_SYMBOLS[mood.id] || '🕯️';
                   return (
                     <button
                       key={mood.id}
                       onClick={() => onSelectMood(mood)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                         isSelected
                           ? 'border-[#D4AF37] bg-[#34291B] text-[#F3EFE6] shadow-sm'
                           : 'border-[#30281F] bg-[#14110E] text-[#9E9281] hover:border-[#4D4133] hover:text-[#D1C7B8]'
                       }`}
                     >
-                      {mood.label}
+                      <span>{symbol}</span>
+                      <span>{mood.label}</span>
                     </button>
                   );
                 })}
@@ -269,17 +316,19 @@ export const WritingDesk: React.FC<WritingDeskProps> = ({
               <div className="flex flex-wrap gap-1.5">
                 {figure.researchKeywords.map((kw) => {
                   const isSelected = selectedKeywords.some((k) => k.id === kw.id);
+                  const symbol = KEYWORD_SYMBOLS[kw.id] || '📌';
                   return (
                     <button
                       key={kw.id}
                       onClick={() => onToggleKeyword(kw)}
-                      className={`flex items-center space-x-1 rounded-full border px-3 py-1 text-xs transition ${
+                      className={`flex items-center space-x-1.5 rounded-full border px-3 py-1 text-xs transition ${
                         isSelected
                           ? 'border-[#D4AF37] bg-[#2E2519] text-[#E5C365] font-semibold'
                           : 'border-[#30271E] bg-[#14110E] text-[#8A7E6E] hover:border-[#483B2D] hover:text-[#C4BAA9]'
                       }`}
                       title={kw.historicalFact}
                     >
+                      <span>{symbol}</span>
                       <span>{kw.label}</span>
                       {isSelected && <Check className="h-3 w-3 text-[#D4AF37]" />}
                     </button>

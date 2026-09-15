@@ -144,6 +144,9 @@ export interface HistoricalFigure {
 }
 
 export interface GeneratedLetter {
+  id?: string;
+  senderId?: string;
+  recipientId?: string;
   salutation: string;
   dateAndLocation: string;
   bodyParagraphs: string[];
