@@ -48,7 +48,7 @@ npm run dev
 
 Open **http://localhost:3000**. Express serves the API and mounts Vite middleware for the frontend.
 
-Both backend implementations currently specify `gemini-3.8-flash`. This documents the repository setting, not a verified available model. If your account does not support it, update the model identifier in both [server.ts](server.ts) and [api/generate-letter.ts](api/generate-letter.ts).
+The Express backend tries `gemini-3.8-flash`, `gemini-flash-latest`, then `gemini-3.1-flash-lite` when responses are empty or errors match its capacity/quota checks. Other errors stop the loop and trigger a template. The Vercel handler only specifies `gemini-3.8-flash`. These are repository settings, not verified available models; review the identifiers in [server.ts](server.ts) and [api/generate-letter.ts](api/generate-letter.ts) for your account.
 
 ## Using the App
 
@@ -57,7 +57,7 @@ Both backend implementations currently specify `gemini-3.8-flash`. This document
 3. Adjust tone, mood, and keywords. Writing-setting changes trigger generation after a 250 ms debounce.
 4. Read the letter and its modern analysis, then copy the letter if desired.
 
-The initial persona selection renders a client template immediately while a server request runs. The UI labels model-generated output as `gemini-3.8-flash` and template output as `archive-engine`.
+The initial persona selection renders a client template immediately while a server request runs. The UI labels model-generated output as `gemini-3.8-flash` and template output as `archive-engine`. The model label is static and does not identify which Express candidate actually succeeded.
 
 ## Commands
 

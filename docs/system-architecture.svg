@@ -34,7 +34,7 @@
 <text x="72" y="733" font-size="15" fill="#475569">Letter · modern analysis · copy</text>
 <rect x="434" y="252" width="340" height="108" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
 <text x="454" y="282" font-size="18" fill="#0f172a" font-weight="700">Express / server.ts</text>
-<text x="454" y="309" font-size="15" fill="#475569">Validate writer + recipient</text>
+<text x="454" y="309" font-size="15" fill="#475569">Validate inputs; ordered model attempts</text>
 <text x="454" y="331" font-size="15" fill="#475569">System instruction + parameters</text>
 <rect x="434" y="398" width="340" height="106" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
 <text x="454" y="428" font-size="18" fill="#0f172a" font-weight="700">Vercel / api/generate-letter.ts</text>

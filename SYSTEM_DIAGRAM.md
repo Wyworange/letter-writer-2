@@ -27,11 +27,11 @@ flowchart TD
     Request -->|POST /api/generate-letter| Route{Deployment mode}
 
     subgraph Backend[Backend · Two alternative deployment paths]
-        Route -->|Node server| Express[server.ts · Express<br/>Check writer and recipient<br/>System prompt + writing parameters]
+        Route -->|Node server| Express[server.ts · Express<br/>Check writer and recipient<br/>System prompt + writing parameters<br/>Ordered model attempts]
         Route -->|Vercel| Function[api/generate-letter.ts<br/>Check method, writer, and recipient<br/>Writing parameter prompt]
         Express -->|API key available| SDK[GoogleGenAI SDK<br/>Request JSON output]
         Function -->|API key available| SDK
-        Express -->|No key / empty response / parsing or API error| ServerTemplate[Persona-specific server templates]
+        Express -->|No key / candidates exhausted / parsing or other API error| ServerTemplate[Persona-specific server templates]
         Function -->|No key / empty response| GenericTemplate[Generic server template]
         Function -->|API or parsing error| Error[HTTP 500]
         SDK --> Parse[Each handler parses JSON<br/>Add generationSource]
@@ -72,6 +72,10 @@ sequenceDiagram
     alt API key available
         API->>AI: Prompt + writing parameters
         AI-->>API: Model response or error
+        opt Express: empty response or recognized capacity/quota error
+            API->>AI: Try next configured candidate
+            AI-->>API: Response or error
+        end
         Note over API: Parse JSON; apply deployment-specific error handling
     else No API key
         Note over API: Generate server template
@@ -89,8 +93,10 @@ sequenceDiagram
 
 | Condition | Express | Vercel |
 | --- | --- | --- |
-| No API key or empty model response | Persona-specific server template | Generic server template |
-| Model call or JSON parsing fails | Persona-specific server template | HTTP 500, then client template |
+| No API key | Persona-specific server template | Generic server template |
+| Empty model response | Try next candidate; server template if none succeeds | Generic server template |
+| Model call fails | Try next candidate for recognized capacity/quota errors; otherwise server template | HTTP 500, then client template |
+| Model JSON parsing fails | Persona-specific server template; no further model attempts | HTTP 500, then client template |
 | Missing writer or recipient | HTTP 400, then client template | HTTP 400, then client template |
 | Network failure or unreadable HTTP JSON | Client template | Client template |
 
@@ -111,7 +117,7 @@ Client fallback assumes the UI still has valid persona and recipient selections.
 | Local development | `npm run dev` starts Express on port 3000; Vite serves the frontend as middleware |
 | Node production deployment | The build produces frontend assets in `dist` and `dist/server.cjs`; run the server with `NODE_ENV=production` so Express serves static files |
 | Vercel deployment | Static frontend with `api/generate-letter.ts`; `vercel.json` configures API and SPA routing rewrites |
-| Model configuration | Both backend files hardcode `gemini-3.8-flash`; this documents the code configuration, without verifying the model's availability |
+| Model configuration | Express candidates: `gemini-3.8-flash`, `gemini-flash-latest`, `gemini-3.1-flash-lite`; Vercel: `gemini-3.8-flash`. Availability has not been verified |
 | Prompt differences | Express sets `systemInstruction`; the Vercel handler does not set this field |
 | Data and storage | Historical material is embedded in source code; the current flow has no database, vector retrieval, live archive queries, or persistent letter storage |
 | Output constraints | JSON MIME type and prompt-defined fields, followed by `JSON.parse`; no runtime schema validation |
