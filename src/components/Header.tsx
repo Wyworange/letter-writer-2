@@ -59,21 +59,22 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="font-serif">Writing Desk</span>
           </button>
 
-          {/* 2. Triad Map */}
+          {/* 2. Network Web (Authentic Correspondence Graph) */}
           <button
-            id="nav-btn-relationship-map"
+            id="nav-btn-network-graph"
             onClick={() => onNavigateView('relationship-map')}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              activeView === 'relationship-map'
+              activeView === 'relationship-map' || activeView === 'network-select'
                 ? 'bg-[#B8860B] text-[#12100E] font-bold shadow-md'
                 : 'text-[#D1C7BD] hover:text-[#F3EFE6] hover:bg-[#251F19]'
             }`}
+            title="Authentic Epistolary Network Diagram"
           >
-            <Layers className="h-3.5 w-3.5" />
-            <span className="font-serif">Triad Map</span>
+            <Share2 className="h-3.5 w-3.5" />
+            <span className="font-serif">Network Web</span>
           </button>
 
-          {/* 3. Personas */}
+          {/* 4. Personas */}
           <button
             id="nav-btn-figure-select"
             onClick={() => onNavigateView('figure-select')}

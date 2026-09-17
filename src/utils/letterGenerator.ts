@@ -128,6 +128,34 @@ export function generateClientHistoricalLetter(
     };
   }
 
+  if (figId === 'franklin') {
+    return {
+      id: `franklin-${recipient.id}-${Date.now()}`,
+      senderId: 'franklin',
+      recipientId: recipient.id,
+      salutation: `Dear Sir, and much esteemed Friend ${recName},`,
+      dateAndLocation: `Passy, near Paris, this 18th Day of May, in the Year of our Lord ${year}`,
+      bodyParagraphs: [
+        `I snatch a few moments from the incessant round of visitors, ministers, and packet dispatches that crowd upon my residence here in Passy, to send you my warmest felicitations upon the present state of ${eventTitle}. The ancient world of monarchies watches our infant Republic with a mixture of wonder, jealousy, and unexpected benevolence.`,
+        `Our affairs here, I am pleased to communicate, have taken a most decisive and favorable turn (${kwLabels || 'Treaty of Alliance and French naval armaments'}). The French court, moved both by genuine affection for the cause of human liberty and a prudent desire to humble their old British adversary, have pledged their maritime forces to our support. I continue to preach to all that our cause is the cause of all mankind, and that we are fighting for their liberty in defending our own.`,
+        `My health, though plagued at intervals by that ancient and obstinate companion, the Gout, remains sufficient for the service of my country. Let us persevere with fortitude, remembering that the eyes of all posterity are turned upon this contest.`
+      ],
+      valediction: 'I have the honor to remain, with the greatest esteem and respect, Your most obedient and humble Servant, Benjamin Franklin',
+      postScriptum: 'P.S. — I dispatch this letter in triplicate aboard three separate merchant vessels, that at least one may escape the vigilant cruisers of the British fleet.',
+      mirroredItalianScript: '',
+      modernBreakdown: {
+        temporalSpeedComparison: `This transatlantic dispatch required 6 to 10 weeks aboard a sailing packet ship navigating stormy North Atlantic waters, with replies requiring an equal duration. Franklin wrote in triplicate to hedge against naval capture. Today, a transatlantic video call or text connects Philadelphia to Paris in 90 milliseconds.`,
+        culturalHierarchiesEtiquette: 'Franklin skillfully balanced 18th-century courtly French diplomatic flattery with his carefully cultivated persona of the rustic, unpowdered American Quaker sage, exploiting the French craze for Rousseauian natural philosophy.',
+        materialCostAndPhysicality: 'High-grade Dutch linen paper, goose quill cut with a penknife, and sealing wax impressed with his personal signet. Packet boat postage was paid by the recipient upon arrival based on the number of paper sheets and distance traveled.',
+        historicalEvidenceCitations: [
+          'The Papers of Benjamin Franklin, Yale University Press (Vols. 26–30: The Paris Years)',
+          'National Archives and Records Administration (NARA), Founders Online (Franklin-Washington Correspondence)'
+        ]
+      },
+      generationSource: 'historical-archive-engine'
+    };
+  }
+
   // Leonardo fallback
   return {
     id: `leonardo-${recipient.id}-${Date.now()}`,

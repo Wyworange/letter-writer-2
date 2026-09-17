@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { HistoricalFigure, Recipient, RelationType } from '../types';
+import { RecipientNetworkWeb } from './RecipientNetworkWeb';
 import { 
   Users, 
   MapPin, 
@@ -12,7 +13,8 @@ import {
   Building2, 
   Crown, 
   GraduationCap, 
-  HeartHandshake 
+  HeartHandshake,
+  Share2
 } from 'lucide-react';
 
 interface NetworkGraphProps {
@@ -115,6 +117,30 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
               <span className="text-[11px] uppercase tracking-wider text-[#8A7E6E]">Scriptorium</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Interactive Constellation Network Diagram (Transparent floating background) */}
+      <div className="mb-8 rounded-2xl border border-[#8C6D46]/40 bg-[#1C120B]/35 backdrop-blur-md p-4 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="flex items-center justify-between mb-3 border-b border-[#8C6D46]/30 pb-3">
+          <div className="flex items-center space-x-2">
+            <Share2 className="h-4 w-4 text-[#D4AF37]" />
+            <h3 className="font-cinzel text-base font-bold text-[#F5F2E9]">
+              Interactive Epistolary Network Diagram
+            </h3>
+          </div>
+          <span className="text-xs text-[#A89D8B] font-serif hidden sm:inline">
+            Click any correspondent to establish letter link
+          </span>
+        </div>
+
+        <div className="w-full py-2">
+          <RecipientNetworkWeb
+            sender={figure}
+            recipients={figure.recipients}
+            selectedRecipient={selectedRecipient}
+            onSelectRecipient={onSelectRecipient}
+          />
         </div>
       </div>
 

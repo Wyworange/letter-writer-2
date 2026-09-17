@@ -36,7 +36,9 @@ import {
   ChevronDown,
   ChevronUp,
   Tag,
-  Cpu
+  Cpu,
+  Send,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   RecipientVisualStamp, 
@@ -230,20 +232,43 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
   const [isWritingAnimationActive, setIsWritingAnimationActive] = useState<boolean>(false);
   const [hasInkedCurrentLetter, setHasInkedCurrentLetter] = useState<boolean>(false);
 
+  // Letter dispatch & courier transit state
+  const [isLetterSent, setIsLetterSent] = useState<boolean>(false);
+  const [showSentModal, setShowSentModal] = useState<boolean>(false);
+
   // Recipient selection state
   const hasReceiver = Boolean(selectedRecipient);
   const activeRecipient = selectedRecipient || null;
   const [showRecipientPicker, setShowRecipientPicker] = useState(!selectedRecipient);
 
+  // Desk view mode: 'network' (100% transparent constellation floating over desk, as in screenshot) vs 'parchment'
+  const [deskViewMode, setDeskViewMode] = useState<'network' | 'parchment'>('network');
+
   // Event category filtering
   const [selectedCategory, setSelectedCategory] = useState<EventCategory>('all');
   const [showArchivalProof, setShowArchivalProof] = useState(false);
   const [isEventsCollapsed, setIsEventsCollapsed] = useState(false);
-  const [isNetworkCollapsed, setIsNetworkCollapsed] = useState(true);
-  const [showDeskFullView, setShowDeskFullView] = useState(false);
 
   // Modern breakdown modal state
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+
+  // Reset sent state when switching recipient or event
+  useEffect(() => {
+    setIsLetterSent(false);
+    setShowSentModal(false);
+  }, [selectedRecipient?.id, selectedEvent?.id]);
+
+  // Watchdog: Guarantee isWritingAnimationActive NEVER hangs forever
+  useEffect(() => {
+    if (!isWritingAnimationActive) return;
+    const watchdogTimer = setTimeout(() => {
+      setIsWritingAnimationActive(false);
+      setHasInkedCurrentLetter(true);
+      setWritingMode('archival');
+    }, 5500);
+
+    return () => clearTimeout(watchdogTimer);
+  }, [isWritingAnimationActive]);
 
   // Whenever selectedRecipient changes, auto-expand or collapse recipient picker
   useEffect(() => {
@@ -411,6 +436,8 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
 
   const handleStartWritingProcess = () => {
     playSoundEffect('dip');
+    setIsLetterSent(false);
+    setShowSentModal(false);
     if (onGenerateLetter) {
       onGenerateLetter();
     }
@@ -424,6 +451,19 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
     setWritingMode('archival');
   };
 
+  const handleSkipInking = () => {
+    playSoundEffect('scratch');
+    setIsWritingAnimationActive(false);
+    setHasInkedCurrentLetter(true);
+    setWritingMode('archival');
+  };
+
+  const handleSendLetter = () => {
+    playSoundEffect('stamp');
+    setIsLetterSent(true);
+    setShowSentModal(true);
+  };
+
   const handleGenerateClick = () => {
     handleStartWritingProcess();
   };
@@ -431,7 +471,6 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
   const handleSelectRecipientCard = (rec: Recipient) => {
     onSelectRecipient(rec);
     setShowRecipientPicker(false);
-    setShowDeskFullView(false);
     playSoundEffect('scratch');
   };
 
@@ -512,6 +551,38 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
 
         {/* Right: Desk Controls & System Diagram */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mode Switcher: Network Diagram vs Parchment */}
+          <div className="inline-flex items-center p-0.5 rounded-xl bg-[#1C120B]/85 border border-[#8C6D46]/60 backdrop-blur-md shadow-md text-xs font-serif">
+            <button
+              id="btn-desk-mode-network"
+              type="button"
+              onClick={() => setDeskViewMode('network')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+                deskViewMode === 'network'
+                  ? 'bg-[#3D2517] text-[#F5EDE3] font-bold border border-[#D4AF37] shadow-xs'
+                  : 'text-[#C5A882] hover:text-[#FFF]'
+              }`}
+              title="View 100% transparent correspondent diagram over desk"
+            >
+              <span>🕸️</span>
+              <span className="hidden sm:inline">Network Diagram</span>
+            </button>
+            <button
+              id="btn-desk-mode-parchment"
+              type="button"
+              onClick={() => setDeskViewMode('parchment')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+                deskViewMode === 'parchment'
+                  ? 'bg-[#3D2517] text-[#F5EDE3] font-bold border border-[#D4AF37] shadow-xs'
+                  : 'text-[#C5A882] hover:text-[#FFF]'
+              }`}
+              title="Open letter parchment sheet"
+            >
+              <span>📜</span>
+              <span className="hidden sm:inline">Writing Parchment</span>
+            </button>
+          </div>
+
           {/* Audio toggle */}
           <button
             id="btn-desk-sound-toggle"
@@ -547,7 +618,7 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
       {/* ========================================================================= */}
       <main className="relative z-20 flex-1 w-full max-w-4xl mx-auto px-3 sm:px-6 py-2 flex flex-col items-stretch">
         
-        {(!hasReceiver || showDeskFullView) ? (
+        {deskViewMode === 'network' ? (
           /* =================================================================== */
           /* PURE FLOATING TRANSPARENT NETWORK (完全透明、无底色，露出书桌信纸与钢笔) */
           /* =================================================================== */
@@ -565,14 +636,14 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
                 </span>
               </div>
 
-              {hasReceiver && showDeskFullView && (
+              {activeRecipient && (
                 <button
                   type="button"
-                  onClick={() => setShowDeskFullView(false)}
+                  onClick={() => setDeskViewMode('parchment')}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#3D2617] text-[#F3EFE6] border border-[#D4AF37] text-xs font-serif hover:bg-[#52331F] transition shadow-md"
                 >
                   <Feather className="h-3.5 w-3.5 text-[#D4AF37]" />
-                  <span>Return to Parchment (To: {activeRecipient?.name})</span>
+                  <span>Open Parchment (To: {activeRecipient?.name})</span>
                 </button>
               )}
             </div>
@@ -606,9 +677,21 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
                 </span>
               </div>
 
-              <span className="text-xs text-[#D4AF37] font-serif font-medium bg-[#1C120B]/85 px-3 py-1.5 rounded-lg border border-[#8C6D46]/40 shadow-sm">
-                Select any correspondent node above to begin writing
-              </span>
+              {activeRecipient ? (
+                <button
+                  id="btn-desk-inscribe-letter"
+                  type="button"
+                  onClick={() => setDeskViewMode('parchment')}
+                  className="flex items-center gap-2 text-xs text-[#F5EDE3] font-serif font-semibold bg-gradient-to-r from-[#3D2517] via-[#52331F] to-[#3D2517] px-4 py-2 rounded-xl border border-[#D4AF37] shadow-lg hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] transition hover:scale-105 cursor-pointer"
+                >
+                  <Feather className="h-3.5 w-3.5 text-[#D4AF37]" />
+                  <span>Inscribe Letter to {activeRecipient.name} →</span>
+                </button>
+              ) : (
+                <span className="text-xs text-[#D4AF37] font-serif font-medium bg-[#1C120B]/85 px-3 py-1.5 rounded-lg border border-[#8C6D46]/40 shadow-sm">
+                  Select any correspondent node above to begin writing
+                </span>
+              )}
             </div>
 
           </div>
@@ -651,75 +734,45 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
             </div>
 
             {/* =================================================================== */}
-            {/* FLOATING LAYER 1: RECIPIENT NETWORK WEB (网状结构，透明底，无背景)   */}
-            {/* Transparent floating constellation over the parchment paper         */}
+            {/* PARCHMENT RECIPIENT BANNER & RETURN TO TRANSPARENT NETWORK          */}
             {/* =================================================================== */}
-            <section className="relative z-30 mb-2">
-              <div className="flex items-center justify-between px-1 mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#B8860B]" />
-                  <h3 className="font-cinzel text-xs sm:text-sm font-bold tracking-wider text-[#3D2211]">
-                    CORRESPONDENTS
-                  </h3>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsNetworkCollapsed(!isNetworkCollapsed)}
-                    className="flex items-center gap-1 text-[11px] font-serif text-[#70482B] hover:text-[#2C180B] px-2 py-0.5 rounded border border-[#C5A882]/50 bg-[#FAF3E6]/70 transition shadow-xs"
-                    title={isNetworkCollapsed ? "Expand full network web" : "Collapse to compact strip"}
-                  >
-                    <span>{isNetworkCollapsed ? '🕸️ View Network' : '▲ Compact Strip'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeskFullView(true)}
-                    className="flex items-center gap-1 text-[11px] font-serif text-[#70482B] hover:text-[#2C180B] px-2 py-0.5 rounded border border-[#C5A882]/50 bg-[#FAF3E6]/70 transition shadow-xs"
-                    title="View full desk and fountain pen"
-                  >
-                    <span>👁️ Full Desk View</span>
-                  </button>
+            <section className="relative z-30 mb-3 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border border-[#8C6D46]/35 bg-[#F4EAD8]/95 shadow-xs">
+              <div className="flex items-center gap-3">
+                {activeRecipient && (
+                  <img
+                    src={getPortraitForPerson(activeRecipient.id, activeRecipient.name)}
+                    alt={activeRecipient.name}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-[#8C6D46] shadow-sm shrink-0"
+                  />
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-cinzel text-xs sm:text-sm font-bold text-[#3D2211]">
+                      Recipient: {activeRecipient?.name}
+                    </span>
+                    {activeRecipient && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#3D2211] text-[#F5EDE3] font-serif font-medium">
+                        {activeRecipient.relation}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-[#70482B] italic">
+                    Destination: {activeRecipient?.location} · {activeRecipient?.transitDays} transit
+                  </div>
                 </div>
               </div>
 
-              {/* If collapsed: compact horizontal recipient strip (does not block letter!) */}
-              {isNetworkCollapsed ? (
-                <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1 scrollbar-none">
-                  {figure.recipients.map((rec) => {
-                    const isSelected = activeRecipient?.id === rec.id;
-                    return (
-                      <button
-                        key={rec.id}
-                        type="button"
-                        onClick={() => handleSelectRecipientCard(rec)}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-serif transition shrink-0 border ${
-                          isSelected
-                            ? 'bg-[#3D2517] text-[#F5EFEB] font-bold border-[#D4AF37] shadow-xs scale-105'
-                            : 'bg-[#EFE5D3]/90 text-[#5A3822] hover:bg-[#E2D2BC] border-[#C5A882]/50'
-                        }`}
-                      >
-                        <img
-                          src={getPortraitForPerson(rec.id, rec.name)}
-                          alt={rec.name}
-                          className="w-5 h-5 rounded-full object-cover border border-[#8C6D46]/40"
-                        />
-                        <span>{rec.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                /* If expanded: 100% transparent floating network web */
-                <div className="relative w-full py-1">
-                  <RecipientNetworkWeb
-                    sender={figure}
-                    recipients={figure.recipients}
-                    selectedRecipient={activeRecipient}
-                    onSelectRecipient={handleSelectRecipientCard}
-                  />
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeskViewMode('network')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#8C6D46]/50 bg-[#FAF3E6] hover:bg-[#FFF] text-[#4A2E19] text-xs font-serif font-semibold shadow-xs transition hover:scale-105"
+                  title="Return to 100% transparent correspondent network constellation across desk"
+                >
+                  <span>🕸️</span>
+                  <span>Transparent Network</span>
+                </button>
+              </div>
             </section>
 
           {/* =================================================================== */}
@@ -1022,8 +1075,21 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
 
                     {/* Valediction & Signature */}
                     <div className="mt-4 flex items-end justify-between pt-2">
-                      <div className="w-12 h-12 rounded-full border-2 border-[#8C2318] bg-[#A1281A] flex items-center justify-center text-[#F5EDE1] shadow-md transform rotate-6 select-none opacity-90">
-                        <span className="font-cinzel text-[10px] font-bold tracking-tighter">SEALED</span>
+                      <div 
+                        onClick={handleSendLetter}
+                        className={`cursor-pointer transition-all duration-300 w-14 h-14 rounded-full border-2 border-[#8C2318] bg-[#A1281A] flex flex-col items-center justify-center text-[#F5EDE1] shadow-md select-none ${
+                          isLetterSent 
+                            ? 'ring-2 ring-emerald-500/60 bg-[#7A1E14]' 
+                            : 'hover:scale-105 hover:shadow-[0_0_15px_rgba(161,40,26,0.6)]'
+                        }`}
+                        title={isLetterSent ? 'Letter dispatched! Click to view transit details' : 'Click to stamp hot wax seal & send dispatch!'}
+                      >
+                        <span className="font-cinzel text-[9px] font-bold tracking-wider">
+                          {isLetterSent ? 'DISPATCHED' : 'SEAL & SEND'}
+                        </span>
+                        <span className="text-[10px] text-[#FAF3E7]">
+                          {isLetterSent ? '✓' : '✉'}
+                        </span>
                       </div>
 
                       <div className="text-right">
@@ -1111,23 +1177,80 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
               )}
             </div>
 
-            {/* Right: Primary Inking Action */}
+            {/* Right: Primary Action (Send Dispatch when letter is done, Inking when writing) */}
             <div className="flex items-center gap-2">
-              <button
-                id="btn-pen-historical-letter"
-                onClick={handleStartWritingProcess}
-                disabled={!hasReceiver || isGenerating || isWritingAnimationActive}
-                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-serif font-semibold transition shadow-md ${
-                  !hasReceiver
-                    ? 'border border-[#8C6D46]/40 bg-[#251810] text-[#7A6250] cursor-not-allowed'
-                    : 'border border-[#D4AF37] bg-gradient-to-r from-[#3D2517] via-[#52331F] to-[#3D2517] text-[#F7EFE4] hover:border-[#F3EFE6] hover:shadow-[0_0_15px_rgba(212,175,55,0.4)]'
-                }`}
-              >
-                <Sparkles className="h-4 w-4 text-[#D4AF37]" />
-                <span>
-                  {isWritingAnimationActive ? 'Inking in Progress...' : isGenerating ? 'Transcribing...' : 'Inscribe Historical Letter'}
-                </span>
-              </button>
+              {isWritingAnimationActive ? (
+                <>
+                  <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-serif font-semibold border border-[#D4AF37]/60 bg-[#2B1B10] text-[#F7EFE4] shadow-md">
+                    <Sparkles className="h-4 w-4 text-[#D4AF37] animate-spin" />
+                    <span>Inking in Progress...</span>
+                  </div>
+                  <button
+                    id="btn-skip-inking-bottom"
+                    onClick={handleSkipInking}
+                    className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-[#D4AF37] bg-[#D4AF37] text-[#12100E] font-serif font-bold text-xs hover:bg-[#F5D580] transition shadow-md cursor-pointer"
+                    title="Skip animation and finish letter immediately"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <span>Finish Inking</span>
+                  </button>
+                </>
+              ) : isGenerating ? (
+                <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-serif font-semibold border border-[#8C6D46]/60 bg-[#251810] text-[#D1C7BD]">
+                  <Feather className="h-4 w-4 text-[#D4AF37] animate-bounce" />
+                  <span>Transcribing Dispatch...</span>
+                </div>
+              ) : (effectiveLetter && (hasInkedCurrentLetter || letter)) ? (
+                <>
+                  {/* Re-inscribe secondary button */}
+                  <button
+                    id="btn-re-inscribe-letter"
+                    onClick={handleStartWritingProcess}
+                    disabled={!hasReceiver}
+                    className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-[#8C6D46]/40 bg-[#251810] text-[#D1C7BD] hover:text-[#F7EFE4] hover:border-[#D4AF37] text-xs font-serif transition shadow-sm cursor-pointer"
+                    title="Re-inscribe letter with current motifs"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 text-[#D4AF37]" />
+                    <span>Re-inscribe</span>
+                  </button>
+
+                  {/* Primary Send Button */}
+                  {!isLetterSent ? (
+                    <button
+                      id="btn-send-historical-letter"
+                      onClick={handleSendLetter}
+                      className="flex items-center gap-2 rounded-xl px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-serif font-bold text-[#12100E] bg-gradient-to-r from-[#D4AF37] via-[#F5D580] to-[#D4AF37] hover:from-[#F5D580] hover:to-[#FFF2B2] shadow-xl hover:shadow-[0_0_20px_rgba(212,175,55,0.6)] transition-all transform hover:scale-105 cursor-pointer"
+                    >
+                      <Send className="h-4 w-4 text-[#12100E]" />
+                      <span>Send Letter to {activeRecipient?.name}</span>
+                    </button>
+                  ) : (
+                    <button
+                      id="btn-view-sent-dispatch"
+                      onClick={() => setShowSentModal(true)}
+                      className="flex items-center gap-2 rounded-xl px-4 sm:px-5 py-2.5 text-xs font-serif font-bold text-emerald-300 bg-[#142316] border border-emerald-500/60 shadow-lg hover:bg-[#1C3220] transition cursor-pointer"
+                      title="Click to view courier transit & tracking status"
+                    >
+                      <Check className="h-4 w-4 text-emerald-400" />
+                      <span>Dispatched via Courier (View)</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  id="btn-pen-historical-letter"
+                  onClick={handleStartWritingProcess}
+                  disabled={!hasReceiver}
+                  className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-serif font-semibold transition shadow-md cursor-pointer ${
+                    !hasReceiver
+                      ? 'border border-[#8C6D46]/40 bg-[#251810] text-[#7A6250] cursor-not-allowed'
+                      : 'border border-[#D4AF37] bg-gradient-to-r from-[#3D2517] via-[#52331F] to-[#3D2517] text-[#F7EFE4] hover:border-[#F3EFE6] hover:shadow-[0_0_15px_rgba(212,175,55,0.4)]'
+                  }`}
+                >
+                  <Sparkles className="h-4 w-4 text-[#D4AF37]" />
+                  <span>Inscribe Historical Letter</span>
+                </button>
+              )}
             </div>
 
           </div>
@@ -1224,6 +1347,119 @@ export const PeriodWritingDeskScene: React.FC<PeriodWritingDeskSceneProps> = ({
                 Close Breakdown
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. HISTORICAL DISPATCH SENT & COURIER TRANSIT MODAL */}
+      {showSentModal && effectiveLetter && activeRecipient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-2xl border-2 border-[#D4AF37]/60 bg-[#160E08] p-6 sm:p-7 text-[#EAD8C7] shadow-[0_0_50px_rgba(212,175,55,0.25)]">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setShowSentModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-[#9E8B7A] hover:text-[#FFF] hover:bg-[#2A180E] transition cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Top Seal Stamp */}
+            <div className="flex flex-col items-center text-center pb-4 mb-4 border-b border-[#8C6D46]/30">
+              <div className="relative w-16 h-16 rounded-full border-2 border-[#8C2318] bg-[#A1281A] flex items-center justify-center text-[#F5EDE1] shadow-[0_0_25px_rgba(161,40,26,0.6)] mb-3 animate-pulse">
+                <span className="font-cinzel text-lg font-bold tracking-widest">
+                  {figure.name.split(' ').map((n: string) => n[0]).join('')}
+                </span>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-700 border-2 border-[#160E08] flex items-center justify-center text-white">
+                  <Check className="h-3.5 w-3.5" />
+                </div>
+              </div>
+
+              <span className="text-[11px] font-mono tracking-widest uppercase text-[#D4AF37] mb-1">
+                Authentic Dispatch Dispatched
+              </span>
+              <h3 className="font-cinzel text-lg sm:text-xl font-bold text-[#FAF3E7]">
+                Letter Committed to Courier
+              </h3>
+              <p className="font-serif italic text-xs text-[#BFA68A] mt-1 max-w-sm">
+                The hot wax seal has hardened. Your epistolary dispatch is now in transit across historical borders.
+              </p>
+            </div>
+
+            {/* Courier Transit Specifications */}
+            <div className="space-y-3 font-serif text-xs mb-6">
+              {/* Route */}
+              <div className="p-3 rounded-xl border border-[#8C6D46]/40 bg-[#22140C]/90 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-mono text-[#9E8B7A] uppercase block">Sender (Origin)</span>
+                  <span className="font-bold text-[#FAF3E7]">{figure.name}</span>
+                  <span className="text-[#BFA68A] block text-[11px]">{figure.city}, {figure.country}</span>
+                </div>
+                <div className="text-center px-3">
+                  <span className="text-[#D4AF37] font-mono text-sm">➔</span>
+                  <span className="text-[9px] font-mono text-[#D4AF37] block whitespace-nowrap">
+                    {activeRecipient.transitDays}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-mono text-[#9E8B7A] uppercase block">Recipient (Destination)</span>
+                  <span className="font-bold text-[#FAF3E7]">{activeRecipient.name}</span>
+                  <span className="text-[#BFA68A] block text-[11px]">{activeRecipient.location}</span>
+                </div>
+              </div>
+
+              {/* Transit Method & Risk */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="p-2.5 rounded-lg border border-[#8C6D46]/30 bg-[#1D110A]">
+                  <span className="text-[10px] font-mono text-[#8C6D46] uppercase block mb-0.5">Courier Conveyance</span>
+                  <span className="font-medium text-[#FAF3E7] text-[11px]">
+                    {figure.writingKit.transitCourier.method}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg border border-[#8C6D46]/30 bg-[#1D110A]">
+                  <span className="text-[10px] font-mono text-[#8C6D46] uppercase block mb-0.5">Interception Risk</span>
+                  <span className={`font-semibold text-[11px] ${
+                    activeRecipient.transitRisk === 'high' ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>
+                    {activeRecipient.transitRisk.toUpperCase()} RISK
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-3 border-t border-[#8C6D46]/30">
+              <button
+                onClick={() => {
+                  setShowSentModal(false);
+                  setIsBreakdownModalOpen(true);
+                }}
+                className="w-full sm:flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#D4AF37] bg-gradient-to-r from-[#3D2517] to-[#52331F] text-[#FAF3E7] hover:border-[#FAF3E7] text-xs font-serif font-semibold shadow-md transition cursor-pointer"
+              >
+                <Info className="h-3.5 w-3.5 text-[#D4AF37]" />
+                <span>View Archival Breakdown</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowSentModal(false);
+                  setIsLetterSent(false);
+                  setHasInkedCurrentLetter(false);
+                  handleStartWritingProcess();
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[#8C6D46]/40 bg-[#251810] text-xs font-serif text-[#D1C7BD] hover:text-[#FAF3E7] hover:border-[#D4AF37] transition cursor-pointer"
+              >
+                Pen Another Dispatch
+              </button>
+
+              <button
+                onClick={() => setShowSentModal(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[#664630]/40 bg-transparent text-xs font-serif text-[#9E8B7A] hover:text-[#FAF3E7] transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}

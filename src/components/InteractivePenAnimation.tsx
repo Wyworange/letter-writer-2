@@ -50,23 +50,23 @@ export const InteractivePenAnimation: React.FC<InteractivePenAnimationProps> = (
     const timer1 = setTimeout(() => {
       setInkingStep(1);
       onPlaySound('scratch');
-    }, 1200);
+    }, 800);
 
     const timer2 = setTimeout(() => {
       setInkingStep(2);
       onPlaySound('scratch');
-    }, 2800);
+    }, 1800);
 
     const timer3 = setTimeout(() => {
       setInkingStep(3);
       onPlaySound('scratch');
-    }, 4500);
+    }, 2800);
 
     const timer4 = setTimeout(() => {
       setInkingStep(4);
       onPlaySound('scratch');
       onWritingComplete();
-    }, 6200);
+    }, 3900);
 
     return () => {
       clearTimeout(timer1);
@@ -84,8 +84,22 @@ export const InteractivePenAnimation: React.FC<InteractivePenAnimationProps> = (
     }
     onPlaySound('scratch');
     if (inkingStep < 4) {
-      setInkingStep((prev) => Math.min(prev + 1, 4));
+      const nextStep = inkingStep + 1;
+      setInkingStep(nextStep);
+      if (nextStep >= 4) {
+        onWritingComplete();
+      }
+    } else {
+      onWritingComplete();
     }
+  };
+
+  const handleFinishImmediately = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInkingStep(4);
+    setIsSealed(true);
+    onPlaySound('stamp');
+    onWritingComplete();
   };
 
   // Handle manual dip nib
@@ -250,11 +264,22 @@ export const InteractivePenAnimation: React.FC<InteractivePenAnimationProps> = (
               <button
                 type="button"
                 onClick={handleGuidePen}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#3D2517] text-[#FAF4EA] hover:bg-[#52331F] border border-[#D4AF37] text-[11px] font-serif transition shadow-xs"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#3D2517] text-[#FAF4EA] hover:bg-[#52331F] border border-[#D4AF37] text-[11px] font-serif transition shadow-xs cursor-pointer"
                 title="Tap to guide the pen stroke forward"
               >
                 <FastForward className="h-3 w-3 text-[#D4AF37]" />
                 <span>Guide Stroke</span>
+              </button>
+
+              {/* Instant Finish Button */}
+              <button
+                type="button"
+                onClick={handleFinishImmediately}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#D4AF37] text-[#12100E] hover:bg-[#F5D580] font-bold text-[11px] font-serif transition shadow-xs cursor-pointer"
+                title="Complete inking instantly"
+              >
+                <Check className="h-3 w-3" />
+                <span>Finish Inking</span>
               </button>
             </div>
           </div>

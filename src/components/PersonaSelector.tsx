@@ -13,27 +13,21 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
   onSelectFigure,
   onOpenRelationshipMap,
 }) => {
-  const [filterCategory, setFilterCategory] = useState<'triad' | 'all'>('triad');
-
-  // Segregate the triad from archival figures
-  const triadFigures = figures.filter(f => ['einstein', 'curie', 'tagore'].includes(f.id));
-  const displayedFigures = filterCategory === 'triad' ? triadFigures : figures;
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
       
-      {/* Intro Banner with Triad Relationship Quick Link */}
+      {/* Intro Banner with Correspondence Network Quick Link */}
       <div className="rounded-2xl border border-[#B8860B]/40 bg-gradient-to-r from-[#1F1914] via-[#2A2218] to-[#1F1914] p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2 text-center md:text-left">
           <div className="inline-flex items-center space-x-2 rounded-full border border-[#B8860B]/40 bg-[#16120E] px-3.5 py-1 text-xs font-semibold text-[#D4AF37] tracking-wider uppercase">
             <Atom className="h-3.5 w-3.5" />
-            <span>Worldwide Multi-Dimensional Relationship Nexus</span>
+            <span>Authentic Historical Epistolary Personas</span>
           </div>
           <h1 className="font-serif text-3xl font-extrabold tracking-tight text-[#F8F5EE] sm:text-4xl">
             Whose Hand Will Hold the Pen?
           </h1>
           <p className="max-w-2xl text-sm text-[#C4B8A5] leading-relaxed">
-            Step into three monumental minds across three countries: Albert Einstein <span className="text-[#D4AF37] font-serif">(Germany)</span>, Marie Curie <span className="text-[#D4AF37] font-serif">(France/Poland)</span>, and Rabindranath Tagore <span className="text-[#D4AF37] font-serif">(India)</span>. Or explore their interconnected relationship matrix.
+            Select an iconic writer across centuries and cultures. Each luminary lived in their own distinct historical world with their own genuine correspondents. Selecting a writer reveals their authentic personal network.
           </p>
         </div>
 
@@ -44,46 +38,27 @@ export const PersonaSelector: React.FC<PersonaSelectorProps> = ({
             className="shrink-0 flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#8B6508] to-[#B8860B] text-[#12100E] font-serif font-bold text-sm shadow-xl hover:from-[#A87B0A] hover:to-[#D4AF37] transition-all"
           >
             <Layers className="w-4 h-4" />
-            <span>View Triad Relationship Map</span>
+            <span>Open Correspondence Network</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* Figures Category Selector */}
+      {/* Figures Category Header */}
       <div className="flex items-center justify-between border-b border-[#3A332A] pb-4">
         <div className="flex items-center space-x-2">
-          <button
-            id="btn-tab-triad"
-            onClick={() => setFilterCategory('triad')}
-            className={`px-4 py-2 rounded-xl text-xs font-serif font-semibold transition-all ${
-              filterCategory === 'triad'
-                ? 'bg-[#B8860B] text-[#12100E] shadow-md'
-                : 'text-[#A89F91] hover:text-[#F8F5EE] bg-[#1A1713]'
-            }`}
-          >
-            Global Triad (Einstein • Curie • Tagore)
-          </button>
-          <button
-            id="btn-tab-all-figures"
-            onClick={() => setFilterCategory('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-serif font-semibold transition-all ${
-              filterCategory === 'all'
-                ? 'bg-[#B8860B] text-[#12100E] shadow-md'
-                : 'text-[#A89F91] hover:text-[#F8F5EE] bg-[#1A1713]'
-            }`}
-          >
-            All 5 Historical Personas (Incl. Leonardo & Franklin)
-          </button>
+          <span className="text-xs font-serif font-bold uppercase tracking-wider text-[#D4AF37]">
+            Historical Luminaries ({figures.length})
+          </span>
         </div>
         <span className="text-xs text-[#8A7F6F] font-mono hidden sm:inline-block">
-          Showing {displayedFigures.length} figures
+          Select any writer to step into their scriptorium
         </span>
       </div>
 
       {/* Persona Cards Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {displayedFigures.map((figure) => (
+        {figures.map((figure) => (
           <div
             key={figure.id}
             id={`persona-card-${figure.id}`}
