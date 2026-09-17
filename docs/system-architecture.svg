@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="940" viewBox="0 0 1200 940" role="img" aria-labelledby="title desc">
+<title id="title">Letter Writer 2 system architecture</title>
+<desc id="desc">Browser selections flow to either Express or Vercel, which call Gemini or return templates. The browser displays the letter and falls back to a local template on request failure.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/></marker></defs>
+<rect width="1200" height="940" rx="24" fill="#f8fafc"/>
+<g font-family="Arial, Helvetica, sans-serif">
+<text x="48" y="55" font-size="14" font-weight="700" fill="#2563eb" letter-spacing="2">EPISTOLA / SYSTEM ARCHITECTURE</text>
+<text x="48" y="98" font-size="34" font-weight="700" fill="#0f172a">From historical context to a personal letter</text>
+<text x="48" y="130" font-size="17" fill="#475569">Two backend deployment options. Server and browser template fallbacks.</text>
+
+<rect x="32" y="168" width="350" height="618" rx="18" fill="white" stroke="#dbeafe" stroke-width="2"/>
+<text x="52" y="202" font-size="16" fill="#0f172a" font-weight="700">01 / BROWSER</text>
+<text x="52" y="227" font-size="15" fill="#475569">React + TypeScript</text>
+<rect x="414" y="168" width="380" height="618" rx="18" fill="white" stroke="#ede9fe" stroke-width="2"/>
+<text x="434" y="202" font-size="16" fill="#0f172a" font-weight="700">02 / BACKEND</text>
+<text x="434" y="227" font-size="15" fill="#475569">Express OR Vercel</text>
+<rect x="826" y="168" width="342" height="618" rx="18" fill="white" stroke="#fef3c7" stroke-width="2"/>
+<text x="846" y="202" font-size="16" fill="#0f172a" font-weight="700">03 / GENERATION</text>
+<text x="846" y="227" font-size="15" fill="#475569">AI + template engines</text>
+<rect x="52" y="252" width="310" height="108" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+<text x="72" y="282" font-size="18" fill="#0f172a" font-weight="700">Explore and configure</text>
+<text x="72" y="309" font-size="15" fill="#475569">Persona · recipient · relationship</text>
+<text x="72" y="331" font-size="15" fill="#475569">Event · tone · mood · keywords</text>
+<rect x="52" y="398" width="310" height="106" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+<text x="72" y="428" font-size="18" fill="#0f172a" font-weight="700">App.tsx</text>
+<text x="72" y="455" font-size="15" fill="#475569">React state + generation request</text>
+<text x="72" y="477" font-size="15" fill="#475569">250 ms settings debounce</text>
+<rect x="52" y="542" width="310" height="96" rx="12" fill="#ecfdf5" stroke="#6ee7b7"/>
+<text x="72" y="572" font-size="18" fill="#0f172a" font-weight="700">Client template</text>
+<text x="72" y="599" font-size="15" fill="#475569">Immediate persona preview</text>
+<text x="72" y="621" font-size="15" fill="#475569">Fallback on request failure</text>
+<rect x="52" y="676" width="310" height="88" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+<text x="72" y="706" font-size="18" fill="#0f172a" font-weight="700">WritingDesk</text>
+<text x="72" y="733" font-size="15" fill="#475569">Letter · modern analysis · copy</text>
+<rect x="434" y="252" width="340" height="108" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+<text x="454" y="282" font-size="18" fill="#0f172a" font-weight="700">Express / server.ts</text>
+<text x="454" y="309" font-size="15" fill="#475569">Validate writer + recipient</text>
+<text x="454" y="331" font-size="15" fill="#475569">System instruction + parameters</text>
+<rect x="434" y="398" width="340" height="106" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+<text x="454" y="428" font-size="18" fill="#0f172a" font-weight="700">Vercel / api/generate-letter.ts</text>
+<text x="454" y="455" font-size="15" fill="#475569">Validate method + required inputs</text>
+<text x="454" y="477" font-size="15" fill="#475569">Writing parameters in prompt</text>
+<rect x="434" y="568" width="340" height="112" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+<text x="454" y="598" font-size="18" fill="#0f172a" font-weight="700">Response handling</text>
+<text x="454" y="625" font-size="15" fill="#475569">JSON.parse + generationSource</text>
+<text x="454" y="647" font-size="15" fill="#475569">Return letter or fallback</text>
+<text x="454" y="669" font-size="15" fill="#475569">Vercel exceptions return HTTP 500</text>
+<rect x="846" y="252" width="302" height="108" rx="12" fill="#fffbeb" stroke="#fcd34d"/>
+<text x="866" y="282" font-size="18" fill="#0f172a" font-weight="700">Gemini API</text>
+<text x="866" y="309" font-size="15" fill="#475569">GoogleGenAI SDK</text>
+<text x="866" y="331" font-size="15" fill="#475569">Server-side GEMINI_API_KEY</text>
+<rect x="846" y="398" width="302" height="128" rx="12" fill="#ecfdf5" stroke="#6ee7b7"/>
+<text x="866" y="428" font-size="18" fill="#0f172a" font-weight="700">Server templates</text>
+<text x="866" y="455" font-size="15" fill="#475569">Express: persona-specific</text>
+<text x="866" y="477" font-size="15" fill="#475569">Vercel: generic template</text>
+<text x="866" y="499" font-size="15" fill="#475569">See fallback rules below</text>
+<rect x="846" y="568" width="302" height="112" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="866" y="598" font-size="18" fill="#0f172a" font-weight="700">Static historical context</text>
+<text x="866" y="625" font-size="15" fill="#475569">Personas, events, relationships</text>
+<text x="866" y="647" font-size="15" fill="#475569">Bundled TypeScript data</text>
+<text x="866" y="669" font-size="15" fill="#475569">Read directly by the browser</text>
+<path d="M 207 360 V 398" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M 207 504 V 542" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5"/>
+<path d="M 207 638 V 676" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M 362 451 H 397 V 306 H 434" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M 397 451 H 434" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="370" y="382" font-size="12" fill="#64748b" font-weight="700">POST</text>
+<path d="M 774 306 H 846" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M 774 451 H 810 V 340 H 846" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M 997 360 V 398" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5"/>
+<path d="M 846 474 H 806 V 624 H 774" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5"/>
+<path d="M 1148 306 H 1156 V 708 H 604 V 680" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M 434 624 H 398 V 720 H 362" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="825" y="734" font-size="13" fill="#475569">JSON response</text>
+<rect x="32" y="810" width="1136" height="100" rx="16" fill="#0f172a"/>
+<text x="54" y="840" font-size="13" fill="#93c5fd" font-weight="700">READING THE DIAGRAM</text>
+<text x="54" y="866" font-size="16" fill="#f8fafc">Solid arrows: request / response flow     Dashed arrows: template fallback</text>
+<text x="54" y="891" font-size="15" fill="#cbd5e1">Historical context is bundled with the app. No live archive retrieval or persistent letter database.</text>
+</g></svg>

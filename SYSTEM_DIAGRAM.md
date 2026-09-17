@@ -2,6 +2,12 @@
 
 Based on the current repository implementation: users select a historical figure, a recipient, and writing settings. The system generates a historical-style letter alongside an analysis from a modern perspective.
 
+![Visual architecture overview](docs/system-architecture.svg)
+
+The overview groups the browser, alternative backends, and generation engines. The detailed flow below shows the exact error branches.
+
+## Detailed Architecture
+
 ```mermaid
 flowchart TD
     User[User] --> UI[Persona and scene selection / Relationship network / Writing desk]
@@ -37,7 +43,58 @@ flowchart TD
     ServerTemplate --> Letter
     GenericTemplate --> Letter
     Error -->|Frontend catches error| Local
+
+    classDef browser fill:#eff6ff,stroke:#3b82f6,color:#0f172a
+    classDef backend fill:#f5f3ff,stroke:#8b5cf6,color:#0f172a
+    classDef fallback fill:#ecfdf5,stroke:#10b981,color:#0f172a
+    classDef external fill:#fffbeb,stroke:#f59e0b,color:#0f172a
+    classDef failure fill:#fff1f2,stroke:#f43f5e,color:#0f172a
+    class UI,State,Data,Assets,Request,Letter,Desk browser
+    class Express,Function,SDK,Parse,Route backend
+    class Local,ServerTemplate,GenericTemplate fallback
+    class Gemini external
+    class Error failure
 ```
+
+## Generation Sequence
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Browser / App.tsx
+    participant Local as Client template
+    participant API as Express OR Vercel
+    participant AI as Gemini API
+    User->>UI: Select persona and recipient
+    UI->>Local: Create immediate preview
+    Local-->>UI: Template letter
+    UI->>API: POST /api/generate-letter
+    alt API key available
+        API->>AI: Prompt + writing parameters
+        AI-->>API: Model response or error
+        Note over API: Parse JSON; apply deployment-specific error handling
+    else No API key
+        Note over API: Generate server template
+    end
+    alt Successful HTTP response with parseable JSON
+        API-->>UI: Letter + modernBreakdown
+    else Request fails, non-2xx, or invalid JSON
+        UI->>Local: Generate fallback letter
+        Local-->>UI: Template letter
+    end
+    UI-->>User: Display letter and modern analysis
+```
+
+## Fallback Rules
+
+| Condition | Express | Vercel |
+| --- | --- | --- |
+| No API key or empty model response | Persona-specific server template | Generic server template |
+| Model call or JSON parsing fails | Persona-specific server template | HTTP 500, then client template |
+| Missing writer or recipient | HTTP 400, then client template | HTTP 400, then client template |
+| Network failure or unreadable HTTP JSON | Client template | Client template |
+
+Client fallback assumes the UI still has valid persona and recipient selections. An unresponsive request has no explicit timeout in the current implementation.
 
 ## Core Data Flow
 
