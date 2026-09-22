@@ -1,0 +1,168 @@
+- banner:
+  - button "Return to Writing Desk":
+  - generic: E P I S T O L A
+  - navigation:
+    - button "Writing Desk":
+      - generic: Writing Desk
+    - button "Network Web":
+      - generic: Network Web
+    - button "Personas":
+      - generic: Personas
+  - button "Writing Kit":
+    - generic: Writing Kit
+  - button "System Diagram":
+    - generic: System Diagram
+- main:
+  - button "Change Pen":
+    - generic: Change Pen
+  - generic: Albert Einstein
+  - generic: •
+  - generic: Celluloid Fountain Pen
+  - paragraph: Caputh Summer Veranda · Potsdam, Germany
+  - button "🕸️ Network Diagram":
+    - generic: 🕸️
+    - generic: Network Diagram
+  - button "📜 Writing Parchment":
+    - generic: 📜
+    - generic: Writing Parchment
+  - button "Enable authentic nib scratching":
+  - button "System Diagram":
+    - generic: System Diagram
+  - main:
+    - generic: EINSTEIN
+    - generic: Albert Einstein
+    - generic: ·
+    - generic: Caputh Summer Veranda · Potsdam, Germany
+    - generic: Berlin / Caputh / Bern / Princeton, 1930
+    - img "Rabindranath Tagore"
+    - generic: "Recipient: Rabindranath Tagore"
+    - generic: Spiritual Peer & Dialogue Partner in Caputh
+    - generic: "Destination: Santiniketan, Bengal, India / Grand Hotel Berlin · 12 to 14 days by Imperial Air Mail and P&O steamer transit"
+    - button "🕸️ Transparent Network":
+      - generic: 🕸️
+      - generic: Transparent Network
+    - generic: HISTORICAL CONTEXT
+    - generic: · The Caputh Meeting on Truth & Reality
+    - button "Collapse"
+    - button "📜 All 5":
+      - generic: 📜
+      - generic: All
+      - generic: "5"
+    - button "💡 Theory 0":
+      - generic: 💡
+      - generic: Theory
+      - generic: "0"
+    - button "🤝 Solidarity 1":
+      - generic: 🤝
+      - generic: Solidarity
+      - generic: "1"
+    - button "⚡ Crises 1":
+      - generic: ⚡
+      - generic: Crises
+      - generic: "1"
+    - button "🌄 Journeys 3":
+      - generic: 🌄
+      - generic: Journeys
+      - generic: "3"
+    - generic: "1930"
+    - generic: 🌄 Journeys
+    - heading "The Caputh Meeting on Truth & Reality" [level=5]
+    - paragraph: Tagore visited Einstein’s summer villa in Caputh near Berlin, conducting their immortal dialogue debating whether objective reality exists independent of human perception.
+    - generic: "1930"
+    - generic: 🌄 Journeys
+    - heading "Dialogue on the Physics & Emotion of Music" [level=5]
+    - paragraph: A second meeting in Berlin exploring Western classical counterpoint (Bach and Mozart) versus Indian melodic ragas as emotional physics.
+    - generic: "1931"
+    - generic: 🤝 Solidarity
+    - heading "The Golden Book of Tagore Dedication" [level=5]
+    - paragraph: Einstein contributed an honorary tribute to the international festschrift celebrating Tagore’s 70th birthday.
+    - generic: "1930"
+    - generic: ⚡ Crises
+    - heading "The Caputh Dialogue on Truth and Music" [level=5]
+    - paragraph: Tagore visits Einstein at his summer villa in Caputh, Berlin, reflecting upon the harmony of the universe, Indian ragas, and the reality of the human spirit.
+    - generic: "1930"
+    - generic: 🌄 Journeys
+    - heading "The Ragas & Counterpoint Encounter" [level=5]
+    - paragraph: Tagore and Einstein debated how musical scales reflect emotional and mathematical truth.
+    - generic: "📌 Event:"
+    - generic: The Caputh Meeting on Truth & Reality (1930)
+    - generic: "Witnesses: Dimitri Marianoff, Margot Einstein, C.F. Andrews"
+    - button "Archival Proof":
+      - generic: Archival Proof
+    - generic: KEY ELEMENTS & MOTIFS
+    - generic: · Select symbols to weave into your letter
+    - generic: 2 motifs active
+    - button "Inscribe Letter":
+      - generic: Inscribe Letter
+    - generic: "Tone:"
+    - button "📜 Contemplative":
+      - generic: 📜
+      - generic: Contemplative
+    - button "📜 Passionate":
+      - generic: 📜
+      - generic: Passionate
+    - button "📜 Whimsical":
+      - generic: 📜
+      - generic: Whimsical
+    - generic: "Mood:"
+    - button "🕯️ Cosmic":
+      - generic: 🕯️
+      - generic: Cosmic
+    - button "🕯️ Urgent":
+      - generic: 🕯️
+      - generic: Urgent
+    - button "🕯️ Serene":
+      - generic: 🕯️
+      - generic: Serene
+    - generic: "Motifs:"
+    - button "✨ Curvature of Spacetime":
+      - generic: ✨
+      - generic: Curvature of Spacetime
+    - button "✨ Mass-Energy Equivalence":
+      - generic: ✨
+      - generic: Mass-Energy Equivalence
+    - button "✨ Objective Reality vs Human Consciousness +":
+      - generic: ✨
+      - generic: Objective Reality vs Human Consciousness
+      - generic: +
+    - button "✨ 1913 Engadine Alpine Walking Tour +":
+      - generic: ✨
+      - generic: 1913 Engadine Alpine Walking Tour
+      - generic: +
+    - button "✨ Mozart & The Violin \"Lina\" +":
+      - generic: ✨
+      - generic: Mozart & The Violin "Lina"
+      - generic: +
+    - button "✨ League of Nations ICIC Geneva +":
+      - generic: ✨
+      - generic: League of Nations ICIC Geneva
+      - generic: +
+    - generic: Berlin / Caputh / Bern / Princeton, 1930
+    - button "✒️ Re-Inscribe Pen":
+      - generic: ✒️
+      - generic: Re-Inscribe Pen
+    - generic: Primary Record Draft
+    - heading "To my esteemed colleague Rabindranath Tagore," [level=4]
+    - paragraph: I write to you from my study regarding The Caputh Meeting on Truth & Reality (1930) (1930). Every observation confirms that our path forward requires disciplined observation and unwavering commitment.
+    - paragraph: The matters we have discussed (Curvature of Spacetime (g_μν), Mass-Energy Equivalence (E=mc²)) continue to yield unexpected insights when examined through first principles.
+    - paragraph: I send you my warmest regards and look forward to our next exchange.
+    - generic "Click to stamp hot wax seal & send dispatch!":
+      - generic: SEAL & SEND
+      - generic: ✉
+    - paragraph: With deepest admiration and cordial respect, Albert Einstein
+    - paragraph: Albert Einstein
+    - paragraph: P.S. — Our latest notes have been carefully sealed and preserved.
+    - button "Freeform Write":
+      - generic: Freeform Write
+    - button "Copy Letter":
+      - generic: Copy Letter
+    - button "System Diagram":
+      - generic: System Diagram
+    - button "Re-inscribe":
+      - generic: Re-inscribe
+    - button "Send Letter to Rabindranath Tagore":
+      - generic: Send Letter to Rabindranath Tagore
+  - generic: 1920s Pelikan 100 marbled black-green barrel
+  - generic: •
+  - generic: Brilliant royal blue fountain ink
+  - generic: "Epistolary Triad: Marie Curie (1911) · Albert Einstein (1922) · Rabindranath Tagore (1930)"

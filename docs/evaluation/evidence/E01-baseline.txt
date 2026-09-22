@@ -1,0 +1,184 @@
+- banner:
+  - button "Return to Writing Desk":
+  - generic: E P I S T O L A
+  - navigation:
+    - button "Writing Desk":
+      - generic: Writing Desk
+    - button "Network Web":
+      - generic: Network Web
+    - button "Personas":
+      - generic: Personas
+  - button "Writing Kit":
+    - generic: Writing Kit
+  - button "System Diagram":
+    - generic: System Diagram
+- main:
+  - button "Change Pen":
+    - generic: Change Pen
+  - generic: Albert Einstein
+  - generic: •
+  - generic: Celluloid Fountain Pen
+  - paragraph: Caputh Summer Veranda · Potsdam, Germany
+  - button "🕸️ Network Diagram":
+    - generic: 🕸️
+    - generic: Network Diagram
+  - button "📜 Writing Parchment":
+    - generic: 📜
+    - generic: Writing Parchment
+  - button "Enable authentic nib scratching":
+  - button "System Diagram":
+    - generic: System Diagram
+  - main:
+    - generic: EINSTEIN
+    - generic: Albert Einstein
+    - generic: ·
+    - generic: Caputh Summer Veranda · Potsdam, Germany
+    - generic: Berlin / Caputh / Bern / Princeton, 1911
+    - img "Marie Skłodowska-Curie"
+    - generic: "Recipient: Marie Skłodowska-Curie"
+    - generic: Beloved Comrade in Science & Lifelong Confidante
+    - generic: "Destination: Laboratoire Curie, 11 Rue Pierre Curie, Paris, France · 24 hours via Berlin-Paris Express mail train transit"
+    - button "🕸️ Transparent Network":
+      - generic: 🕸️
+      - generic: Transparent Network
+    - generic: HISTORICAL CONTEXT
+    - generic: · First Solvay Council in Brussels
+    - button "Collapse"
+    - button "📜 All 9":
+      - generic: 📜
+      - generic: All
+      - generic: "9"
+    - button "💡 Theory 1":
+      - generic: 💡
+      - generic: Theory
+      - generic: "1"
+    - button "🤝 Solidarity 3":
+      - generic: 🤝
+      - generic: Solidarity
+      - generic: "3"
+    - button "⚡ Crises 3":
+      - generic: ⚡
+      - generic: Crises
+      - generic: "3"
+    - button "🌄 Journeys 2":
+      - generic: 🌄
+      - generic: Journeys
+      - generic: "2"
+    - generic: "1911"
+    - generic: ⚡ Crises
+    - heading "First Solvay Council in Brussels" [level=5]
+    - paragraph: Marie and Albert met for the first time at Hotel Métropole, walking the streets of Brussels debating the crisis of quantum energy packets and radioactivity.
+    - generic: "1911"
+    - generic: 🤝 Solidarity
+    - heading "Solidarity Letter Amidst Paris Press Scandal" [level=5]
+    - paragraph: Einstein wrote a blistering letter of moral support urging Marie to ignore the xenophobic and misogynist attacks fabricated by the Paris tabloid press.
+    - generic: "1913"
+    - generic: 🌄 Journeys
+    - heading "Engadine Alpine Glacier Expedition" [level=5]
+    - paragraph: Marie and Albert spent weeks hiking through the Swiss Alps with their children, leaping glacier crevasses and discussing relativity under open skies.
+    - generic: 1905–1911
+    - generic: 💡 Theory
+    - heading "The Empirical Physical Proof of E=mc²" [level=5]
+    - paragraph: Einstein derived mass-energy equivalence theoretically, but Marie Curie’s isolated radium was the only substance on Earth providing tangible experimental proof.
+    - generic: "1922"
+    - generic: 🤝 Solidarity
+    - heading "League of Nations ICIC Assembly in Geneva" [level=5]
+    - paragraph: Marie Curie and Albert Einstein took seats as founding delegates of the International Committee on Intellectual Cooperation to mend scientific fraternity after WWI.
+    - generic: "1911"
+    - generic: 🤝 Solidarity
+    - heading "Solidarity Letter from Prague to Marie Curie" [level=5]
+    - paragraph: Einstein wrote a blistering letter of moral support urging Marie to ignore the xenophobic and misogynist attacks fabricated by the Paris tabloid press.
+    - generic: "1913"
+    - generic: 🌄 Journeys
+    - heading "Swiss Engadine Alpine Walking Expedition" [level=5]
+    - paragraph: Einstein, his son Hans Albert, Marie Curie, and her daughters Irène and Ève hiked together across glacier passes.
+    - generic: "1911"
+    - generic: ⚡ Crises
+    - heading "First Solvay Council in Brussels" [level=5]
+    - paragraph: Marie and Albert met in Brussels to debate the quantum crisis; walked the streets discussing radiation quanta.
+    - generic: "1922"
+    - generic: ⚡ Crises
+    - heading "League of Nations ICIC Leadership in Geneva" [level=5]
+    - paragraph: Both served as vanguard members of the International Committee on Intellectual Cooperation in Geneva.
+    - generic: "📌 Event:"
+    - generic: First Solvay Council in Brussels (1911)
+    - generic: "Witnesses: Hendrik Lorentz, Max Planck, Ernest Rutherford"
+    - button "Archival Proof":
+      - generic: Archival Proof
+    - generic: KEY ELEMENTS & MOTIFS
+    - generic: · Select symbols to weave into your letter
+    - generic: 2 motifs active
+    - button "Inscribe Letter":
+      - generic: Inscribe Letter
+    - generic: "Tone:"
+    - button "📜 Contemplative":
+      - generic: 📜
+      - generic: Contemplative
+    - button "📜 Passionate":
+      - generic: 📜
+      - generic: Passionate
+    - button "📜 Whimsical":
+      - generic: 📜
+      - generic: Whimsical
+    - generic: "Mood:"
+    - button "🕯️ Cosmic":
+      - generic: 🕯️
+      - generic: Cosmic
+    - button "🕯️ Urgent":
+      - generic: 🕯️
+      - generic: Urgent
+    - button "🕯️ Serene":
+      - generic: 🕯️
+      - generic: Serene
+    - generic: "Motifs:"
+    - button "✨ Curvature of Spacetime":
+      - generic: ✨
+      - generic: Curvature of Spacetime
+    - button "✨ Mass-Energy Equivalence":
+      - generic: ✨
+      - generic: Mass-Energy Equivalence
+    - button "✨ Objective Reality vs Human Consciousness +":
+      - generic: ✨
+      - generic: Objective Reality vs Human Consciousness
+      - generic: +
+    - button "✨ 1913 Engadine Alpine Walking Tour +":
+      - generic: ✨
+      - generic: 1913 Engadine Alpine Walking Tour
+      - generic: +
+    - button "✨ Mozart & The Violin \"Lina\" +":
+      - generic: ✨
+      - generic: Mozart & The Violin "Lina"
+      - generic: +
+    - button "✨ League of Nations ICIC Geneva +":
+      - generic: ✨
+      - generic: League of Nations ICIC Geneva
+      - generic: +
+    - generic: Berlin / Caputh / Bern / Princeton, 1911
+    - button "✒️ Re-Inscribe Pen":
+      - generic: ✒️
+      - generic: Re-Inscribe Pen
+    - generic: Primary Record Draft
+    - heading "To my esteemed colleague Marie Skłodowska-Curie," [level=4]
+    - paragraph: I write to you from my study regarding First Solvay Council in Brussels (1911) (1911). Every observation confirms that our path forward requires disciplined observation and unwavering commitment.
+    - paragraph: The matters we have discussed (Curvature of Spacetime (g_μν), Mass-Energy Equivalence (E=mc²)) continue to yield unexpected insights when examined through first principles.
+    - paragraph: I send you my warmest regards and look forward to our next exchange.
+    - generic "Click to stamp hot wax seal & send dispatch!":
+      - generic: SEAL & SEND
+      - generic: ✉
+    - paragraph: With deepest admiration and cordial respect, Albert Einstein
+    - paragraph: Albert Einstein
+    - paragraph: P.S. — Our latest notes have been carefully sealed and preserved.
+    - button "Freeform Write":
+      - generic: Freeform Write
+    - button "Copy Letter":
+      - generic: Copy Letter
+    - button "System Diagram":
+      - generic: System Diagram
+    - button "Re-inscribe":
+      - generic: Re-inscribe
+    - button "Send Letter to Marie Skłodowska-Curie":
+      - generic: Send Letter to Marie Skłodowska-Curie
+  - generic: 1920s Pelikan 100 marbled black-green barrel
+  - generic: •
+  - generic: Brilliant royal blue fountain ink
+  - generic: "Epistolary Triad: Marie Curie (1911) · Albert Einstein (1922) · Rabindranath Tagore (1930)"

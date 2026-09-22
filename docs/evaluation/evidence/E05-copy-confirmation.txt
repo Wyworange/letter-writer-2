@@ -1,0 +1,7 @@
+Browser observation, 21 September 2026, approximately 19:34 PDT.
+Action: clicked Copy Letter on the Einstein -> Rabindranath Tagore letter.
+Returned accessibility state:
+  180 button Letter Copied
+  The focused UI element is 180 button Letter Copied
+The subsequent browser-automation clipboard read returned an empty string.
+This records the observed confirmation, not a verified clipboard payload.
